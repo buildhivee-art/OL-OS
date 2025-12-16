@@ -24,8 +24,13 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
-      <UserSidebar />
-      <main className="flex-1 overflow-y-auto flex flex-col">
+      {/* Fixed Sidebar */}
+      <div className="hidden md:block w-64 fixed inset-y-0 z-50">
+          <UserSidebar />
+      </div>
+
+      {/* Main Content - with left margin to offset fixed sidebar */}
+      <main className="flex-1 md:pl-64 flex flex-col min-h-screen">
           <StatusHUD />
         <div className="flex-1 p-8 max-w-7xl mx-auto w-full">
           <PageTransition>

@@ -171,9 +171,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-8">
         {/* ... stats cards ... */}
-        <Card className="md:col-span-1 bg-gradient-to-br from-orange-500/10 to-transparent border-orange-500/20 shadow-lg">
+        <Card className="md:col-span-1 bg-gradient-to-br from-orange-500/10 to-transparent border-orange-500/20 shadow-lg hover:shadow-orange-500/10 transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-orange-500">Streak</CardTitle>
                 <Flame className="h-4 w-4 text-orange-500" />
@@ -183,7 +183,7 @@ export default function DashboardPage() {
             </CardContent>
         </Card>
 
-         <Card className="md:col-span-1 bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20 shadow-lg">
+         <Card className="md:col-span-1 bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20 shadow-lg hover:shadow-emerald-500/10 transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-emerald-500">Consistency</CardTitle>
                 <Target className="h-4 w-4 text-emerald-500" />
@@ -194,7 +194,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* FINANCE CARD */}
-        <Card className="md:col-span-2 bg-gradient-to-br from-yellow-500/5 to-transparent border-zinc-200 dark:border-zinc-800 shadow-lg relative overflow-hidden">
+        <Card className="md:col-span-2 bg-gradient-to-br from-yellow-500/5 to-transparent border-zinc-200 dark:border-zinc-800 shadow-lg relative overflow-hidden hover:border-yellow-500/20 transition-colors">
              <div className="absolute right-4 top-4 opacity-10"><Wallet className="w-24 h-24" /></div>
             <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Financial Status</CardTitle>
@@ -208,13 +208,49 @@ export default function DashboardPage() {
             </CardContent>
         </Card>
 
+        {/* WIDGETS ROW */}
+        <div className="md:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+             {/* Quick Capture (Note) */}
+             <Card className="bg-zinc-50 dark:bg-zinc-900/50 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-primary/50 transition-colors cursor-pointer group" onClick={() => router.push('/dashboard/vault')}>
+                 <CardContent className="p-6 flex items-center justify-center flex-col text-center gap-2">
+                     <div className="p-3 rounded-full bg-primary/10 text-primary group-hover:scale-110 transition-transform">
+                        <Share2 className="w-6 h-6" />
+                     </div>
+                     <h3 className="font-semibold">Quick Capture</h3>
+                     <p className="text-xs text-muted-foreground">Log a thought into The Vault</p>
+                 </CardContent>
+             </Card>
+
+             {/* Focus Mode Widget */}
+             <Card className="bg-zinc-50 dark:bg-zinc-900/50 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-indigo-500/50 transition-colors cursor-pointer group" onClick={() => router.push('/dashboard/focus')}>
+                 <CardContent className="p-6 flex items-center justify-center flex-col text-center gap-2">
+                     <div className="p-3 rounded-full bg-indigo-500/10 text-indigo-500 group-hover:scale-110 transition-transform">
+                        <Activity className="w-6 h-6" />
+                     </div>
+                     <h3 className="font-semibold">Enter Flow State</h3>
+                     <p className="text-xs text-muted-foreground">Start a deep work session</p>
+                 </CardContent>
+             </Card>
+
+             {/* System Roadmap Widget */}
+             <Card className="bg-zinc-50 dark:bg-zinc-900/50 border-dashed border-zinc-300 dark:border-zinc-700 hover:border-yellow-500/50 transition-colors cursor-pointer group" onClick={() => router.push('/dashboard/roadmap')}>
+                 <CardContent className="p-6 flex items-center justify-center flex-col text-center gap-2">
+                     <div className="p-3 rounded-full bg-yellow-500/10 text-yellow-500 group-hover:scale-110 transition-transform">
+                        <LayoutList className="w-6 h-6" />
+                     </div>
+                     <h3 className="font-semibold">System Roadmap</h3>
+                     <p className="text-xs text-muted-foreground">Suggest a feature or upgrade</p>
+                 </CardContent>
+             </Card>
+        </div>
+
         {/* ROW 2: MISSION CONTROL (TODAY'S TASKS) */}
-        <Card className="md:col-span-2 lg:col-span-3 row-span-2 flex flex-col border-zinc-200 dark:border-zinc-800 shadow-xl">
-             <CardHeader>
+        <Card className="md:col-span-2 lg:col-span-3 row-span-2 flex flex-col border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden">
+             <CardHeader className="bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-100 dark:border-zinc-800">
                 <CardTitle className="flex items-center gap-2"><LayoutList className="w-5 h-5 text-primary" /> Today&apos;s Mission</CardTitle>
                 <CardDescription>{format(new Date(), 'EEEE, MMMM do')}</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto max-h-[400px] space-y-2 pr-2 custom-scrollbar">
+            <CardContent className="flex-1 overflow-y-auto max-h-[400px] space-y-2 p-4 custom-scrollbar">
                 {tasks.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
                         <Zap className="w-10 h-10 mb-2 opacity-20" />
@@ -226,23 +262,23 @@ export default function DashboardPage() {
                         const isDone = !!logs[`${task._id}-${todayStr}`];
                         const taskStreak = getTaskStreak(task._id);
                         return (
-                            <div key={task._id} className={cn("group flex items-center justify-between p-3 rounded-xl border transition-all duration-300", 
+                            <div key={task._id} className={cn("group flex items-center justify-between p-4 rounded-xl border transition-all duration-300", 
                                 isDone 
                                     ? "bg-green-500/10 border-green-500/20" 
-                                    : "bg-zinc-50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-700"
+                                    : "bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-sm"
                             )}>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-4">
                                     <button 
                                         onClick={() => handleToggle(task._id)}
-                                        className={cn("transition-colors", isDone ? "text-green-500" : "text-zinc-300 hover:text-zinc-500")}
+                                        className={cn("transition-all duration-300 transform active:scale-90", isDone ? "text-green-500" : "text-zinc-300 hover:text-green-500")}
                                     >
                                         {isDone ? <CheckCircle2 className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
                                     </button>
                                     <div>
-                                        <p className={cn("font-medium transition-all", isDone && "text-muted-foreground line-through")}>{task.title}</p>
-                                        <div className="flex gap-2">
-                                            <span className="text-[10px] uppercase font-bold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">{(task.category as any)?.name || 'General'}</span>
-                                            {taskStreak > 0 && <span className="text-[10px] text-orange-500 flex items-center gap-0.5"><Flame className="w-3 h-3" /> {taskStreak}</span>}
+                                        <p className={cn("font-medium text-lg transition-all", isDone && "text-muted-foreground line-through decoration-zinc-500/50")}>{task.title}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] uppercase font-bold text-muted-foreground bg-secondary px-2 py-0.5 rounded-md tracking-wider">{(task.category as any)?.name || 'General'}</span>
+                                            {taskStreak > 0 && <span className="text-[10px] text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-md font-bold flex items-center gap-1"><Flame className="w-3 h-3" /> {taskStreak} Day Streak</span>}
                                         </div>
                                     </div>
                                 </div>
@@ -260,39 +296,40 @@ export default function DashboardPage() {
         <div className="md:col-span-2 lg:col-span-1 flex flex-col gap-6">
             
             {/* DAILY WISDOM */}
-            <Card className="bg-zinc-900 text-white border-zinc-800">
-                <CardHeader className="pb-2">
+            <Card className="bg-zinc-900 text-white border-zinc-800 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-5"><Quote className="w-32 h-32 rotate-12" /></div>
+                <CardHeader className="pb-2 relative z-10">
                     <CardTitle className="text-xs uppercase tracking-widest text-zinc-500 flex items-center gap-2"><Quote className="w-3 h-3" /> Daily Wisdom</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <blockquote className="space-y-2">
-                         <p className="text-lg font-serif italic leading-relaxed">&ldquo;{quote.text}&rdquo;</p>
-                         <footer className="text-sm text-zinc-400 font-medium">&mdash; {quote.author}</footer>
+                <CardContent className="relative z-10">
+                    <blockquote className="space-y-4">
+                         <p className="text-xl font-serif italic leading-relaxed text-zinc-100">&ldquo;{quote.text}&rdquo;</p>
+                         <footer className="text-sm text-primary font-bold tracking-wide">— {quote.author}</footer>
                     </blockquote>
                 </CardContent>
             </Card>
 
             {/* QUICK ACTIONS */}
-            <Card>
+            <Card className="border-zinc-200 dark:border-zinc-800 shadow-lg">
                 <CardHeader className="pb-2">
-                     <CardTitle className="text-sm font-medium text-muted-foreground">Quick Access</CardTitle>
+                     <CardTitle className="text-sm font-medium text-muted-foreground">Command Center</CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-2">
-                    <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => router.push('/dashboard/habits/track')}>
-                        <Activity className="w-5 h-5 text-primary" />
-                        <span className="text-xs">Log Habits</span>
+                <CardContent className="grid grid-cols-2 gap-3">
+                    <Button variant="outline" className="h-24 flex flex-col gap-2 hover:border-primary/50 hover:bg-primary/5 space-y-1" onClick={() => router.push('/dashboard/habits/track')}>
+                        <Activity className="w-6 h-6 text-primary" />
+                        <span className="text-xs font-semibold">Log Habits</span>
                     </Button>
-                    <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => router.push('/dashboard/finance')}>
-                        <Wallet className="w-5 h-5 text-green-500" />
-                        <span className="text-xs">Finance</span>
+                    <Button variant="outline" className="h-24 flex flex-col gap-2 hover:border-green-500/50 hover:bg-green-500/5 space-y-1" onClick={() => router.push('/dashboard/finance')}>
+                        <Wallet className="w-6 h-6 text-green-500" />
+                        <span className="text-xs font-semibold">Finance</span>
                     </Button>
-                    <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => router.push('/dashboard/habits/weekly-log')}>
-                        <Calendar className="w-5 h-5 text-orange-500" />
-                        <span className="text-xs">Weekly Log</span>
+                    <Button variant="outline" className="h-24 flex flex-col gap-2 hover:border-orange-500/50 hover:bg-orange-500/5 space-y-1" onClick={() => router.push('/dashboard/habits/weekly-log')}>
+                        <Calendar className="w-6 h-6 text-orange-500" />
+                        <span className="text-xs font-semibold">Weekly Log</span>
                     </Button>
-                    <Button variant="outline" className="h-20 flex flex-col gap-2" onClick={() => router.push('/dashboard/settings')}>
-                         <Zap className="w-5 h-5 text-purple-500" />
-                         <span className="text-xs">Settings</span>
+                    <Button variant="outline" className="h-24 flex flex-col gap-2 hover:border-purple-500/50 hover:bg-purple-500/5 space-y-1" onClick={() => router.push('/dashboard/settings')}>
+                         <Zap className="w-6 h-6 text-purple-500" />
+                         <span className="text-xs font-semibold">Settings</span>
                     </Button>
                 </CardContent>
             </Card>

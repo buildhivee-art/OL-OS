@@ -25,10 +25,12 @@ app.use(express.json());
 connectDB();
 
 import { initScheduledJobs } from './utils/scheduler';
+import { seedRoadmap } from './utils/seedRoadmap';
 
 // ...
 // Seed Data
 seedCategories();
+seedRoadmap();
 initScheduledJobs();
 
 // Routes

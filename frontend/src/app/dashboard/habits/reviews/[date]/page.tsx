@@ -16,16 +16,21 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
-import { useSearchParams } from 'next/navigation';
+interface Props {
+    params: { date: string }
+}
 
-export default function WeeklyLogPage() {
+export default function WeeklyReviewDetailPage({ params }: Props) {
   const { currentLog, fetchLogByDate, updateLog } = useWeeklyLogStore();
   const { logs: taskLogs, fetchLogs: fetchTaskLogs, tasks } = useTaskStore();
   
-  const searchParams = useSearchParams();
-  const dateParam = searchParams.get('date');
+  const { date } = params;
 
-  const [currentDate, setCurrentDate] = useState(new Date()); // Any date in the week
+  // Initialize date from URL param
+  const [currentDate, setCurrentDate] = useState(() => {
+      const d = new Date(date);
+      return isNaN(d.getTime()) ? new Date() : d;
+  });
   
   // Form State
   const [title, setTitle] = useState('');
@@ -47,13 +52,9 @@ export default function WeeklyLogPage() {
 
   // Load Log & Stats
   useEffect(() => {
-    // If param exists, load that. Else load current week start.
-    const dateToLoad = dateParam || weekStartStr;
-    if (dateParam) setCurrentDate(new Date(dateParam)); // Sync calendar
-    
-    fetchLogByDate(dateToLoad);
-    fetchTaskLogs(dateToLoad, format(endOfWeek(new Date(dateToLoad), {weekStartsOn: 1}), 'yyyy-MM-dd'));
-  }, [weekStartStr, fetchLogByDate, fetchTaskLogs, weekEndStr, dateParam]);
+      fetchLogByDate(weekStartStr);
+      fetchTaskLogs(weekStartStr, weekEndStr);
+  }, [weekStartStr, fetchLogByDate, fetchTaskLogs, weekEndStr]);
 
   // Sync state with loaded log
   useEffect(() => {

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { LayoutList, Activity, BookOpen } from 'lucide-react';
+import { LayoutList, Activity, BookOpen, PenLine } from 'lucide-react';
 
 export function HabitNav() {
   const pathname = usePathname();
@@ -55,8 +55,20 @@ export function HabitNav() {
             : "border-transparent text-muted-foreground hover:text-foreground"
         )}
       >
-        <BookOpen className="h-4 w-4" />
+        <PenLine className="h-4 w-4" />
         Weekly Log
+      </Link>
+      <Link
+        href="/dashboard/habits/reviews"
+        className={cn(
+          "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors",
+          pathname === '/dashboard/habits/reviews'
+            ? "border-primary text-primary"
+            : "border-transparent text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <BookOpen className="h-4 w-4" />
+        Weekly Archive
       </Link>
     </div>
   );
