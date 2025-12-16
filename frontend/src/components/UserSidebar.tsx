@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, User, BookOpen, LogOut, Target, Wallet, Settings } from 'lucide-react';
+import { LayoutDashboard, User, BookOpen, LogOut, Target, Wallet, Settings, Hourglass } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'next/navigation';
 
@@ -31,16 +31,22 @@ export function UserSidebar() {
       active: pathname === '/dashboard/profile',
     },
     {
+      label: 'Categories',
+      icon: BookOpen,
+      href: '/dashboard/categories',
+      active: pathname === '/dashboard/categories',
+    },
+    {
       label: 'Habits',
       icon: Target,
       href: '/dashboard/habits',
-      active: pathname === '/dashboard/habits',
+      active: pathname === '/dashboard/habits' || pathname.startsWith('/dashboard/habits'),
     },
     {
-      label: 'Categories',
-      icon: BookOpen,
-      href: '/categories',
-      active: pathname === '/categories',
+      label: 'Deep Focus',
+      icon: Hourglass,
+      href: '/dashboard/focus',
+      active: pathname === '/dashboard/focus',
     },
     {
       label: 'Finance',
