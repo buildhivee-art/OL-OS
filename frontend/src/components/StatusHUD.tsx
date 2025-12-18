@@ -3,21 +3,25 @@
 import { useAuthStore } from '@/stores/authStore';
 import { useFinanceStore } from '@/stores/financeStore';
 import { useTaskStore } from '@/stores/taskStore';
-import { useSettingsStore, getCurrencySymbol, formatCurrencyValue } from '@/stores/settingsStore';
+import { useSettingsStore, formatCurrencyValue } from '@/stores/settingsStore';
 import { ModeToggle } from '@/components/mode-toggle';
 import { useEffect, useMemo } from 'react';
 import { Progress } from '@/components/ui/progress';
-import { Trophy, Coins, Activity, Zap, Menu } from 'lucide-react';
+import { Trophy, Coins, Activity, Zap, Menu, PanelRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 
 interface StatusHUDProps {
     onMobileMenuClick?: () => void;
+    onToggleRightSidebar?: () => void;
 }
 
-export function StatusHUD({ onMobileMenuClick }: StatusHUDProps) {
+export function StatusHUD({ onMobileMenuClick, onToggleRightSidebar }: StatusHUDProps) {
   const { user } = useAuthStore();
   const { currency } = useSettingsStore();
+
+  // const { user } ... is above
+  
   const { summary, fetchSummary } = useFinanceStore();
   const { tasks, logs, fetchTasks, fetchLogs } = useTaskStore();
 
@@ -98,8 +102,15 @@ export function StatusHUD({ onMobileMenuClick }: StatusHUDProps) {
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
             <ModeToggle />
+            
+            <div className="h-6 w-[1px] bg-border mx-2 hidden md:block" />
+
+            {/* Right Sidebar Toggle */}
+            <Button variant="ghost" size="icon" onClick={onToggleRightSidebar}>
+                <PanelRight className="w-5 h-5" />
+            </Button>
         </div>
     </div>
   );
