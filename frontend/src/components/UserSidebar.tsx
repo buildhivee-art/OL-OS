@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, User, BookOpen, LogOut, Target, Wallet, Settings, Hourglass, Clapperboard, Dumbbell, Inbox, ListTree, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, User, BookOpen, LogOut, Target, Wallet, Settings, Hourglass, Clapperboard, Dumbbell, Inbox, ListTree, Calendar, ChevronLeft, ChevronRight, Brain, Briefcase, BarChart3 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'next/navigation';
 
@@ -86,6 +86,24 @@ export function UserSidebar({ isCollapsed, toggleCollapse }: UserSidebarProps) {
       icon: Wallet,
       href: '/dashboard/finance',
       active: pathname === '/dashboard/finance',
+    },
+    {
+      label: 'Projects',
+      icon: Briefcase,
+      href: '/dashboard/projects',
+      active: pathname === '/dashboard/projects',
+    },
+    {
+      label: 'Knowledge Base',
+      icon: Brain,
+      href: '/dashboard/knowledge',
+      active: pathname === '/dashboard/knowledge',
+    },
+    {
+      label: 'Analytics',
+      icon: BarChart3,
+      href: '/dashboard/analytics',
+      active: pathname === '/dashboard/analytics',
     },
     {
       label: 'Settings',
