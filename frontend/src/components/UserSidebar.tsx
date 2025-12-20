@@ -34,6 +34,12 @@ export function UserSidebar({ isCollapsed, toggleCollapse }: UserSidebarProps) {
       active: pathname === '/dashboard',
     },
     {
+      label: 'Today',
+      icon: Calendar,
+      href: '/dashboard/today',
+      active: pathname === '/dashboard/today',
+    },
+    {
       label: 'Profile',
       icon: User,
       href: '/dashboard/profile',
