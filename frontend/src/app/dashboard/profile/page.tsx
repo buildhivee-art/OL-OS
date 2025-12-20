@@ -142,7 +142,7 @@ export default function ProfilePage() {
                   {/* Avatar */}
                   <div className="relative group">
                       <Avatar className="h-32 w-32 border-4 border-black shadow-2xl rounded-2xl">
-                            <AvatarImage src={user?.avatar} /> 
+                            <AvatarImage src={'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2070&auto=format&fit=crop'} /> 
                             <AvatarFallback className="text-4xl bg-zinc-800 text-zinc-200 font-bold rounded-2xl">
                                 {getInitials(user?.name || '')}
                             </AvatarFallback>
@@ -376,10 +376,10 @@ export default function ProfilePage() {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                   <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
+                      {/* <div className="space-y-2">
                           <Label>Display Name</Label>
                           <Input value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-                      </div>
+                      </div> */}
                       <div className="space-y-2">
                           <Label>Tagline</Label>
                           <Input value={formData.tagline || ''} onChange={(e) => setFormData({...formData, tagline: e.target.value})} />

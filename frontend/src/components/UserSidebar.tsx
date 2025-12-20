@@ -85,7 +85,7 @@ export function UserSidebar({ isCollapsed, toggleCollapse }: UserSidebarProps) {
       label: 'Content',
       icon: Clapperboard,
       href: '/dashboard/content',
-      active: pathname === '/dashboard/content',
+      active: pathname === '/dashboard/content' || pathname.startsWith('/dashboard/content'),
     },
     {
       label: 'Finance',

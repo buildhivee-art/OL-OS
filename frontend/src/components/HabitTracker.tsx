@@ -160,12 +160,12 @@ export function HabitTracker() {
                     return (
                         <div key={day.toISOString()} className={cn(
                             "group relative text-center p-2 flex flex-col items-center justify-center border-b border-r border-zinc-100 dark:border-zinc-800/50 last:border-r-0 transition-colors",
-                            isToday ? "bg-primary/5" : "bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                            isToday ? "bg-primary/5 " : "bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900"
                         )}>
                             <span className={cn("text-[10px] font-bold uppercase tracking-widest mb-1", isToday ? "text-primary" : "text-muted-foreground")}>{format(day, 'EEE')}</span>
                             <div className={cn(
                                 "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
-                                isToday ? "bg-primary text-white shadow-lg shadow-primary/20 scale-110" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                                isToday ? "bg-primary dark:bg-white text-white dark:text-black shadow-lg shadow-primary/20 scale-110" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
                             )}>
                                 {format(day, 'd')}
                             </div>

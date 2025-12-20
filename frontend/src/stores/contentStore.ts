@@ -7,7 +7,7 @@ const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api
 export interface ContentItem {
   _id?: string;
   title: string;
-  platform: 'twitter' | 'instagram' | 'youtube';
+  platform: 'twitter' | 'instagram' | 'youtube' | 'linkedin' | 'blog';
   type: 'tweet' | 'thread' | 'reel' | 'post' | 'video' | 'short' | 'story';
   status: 'idea' | 'scripting' | 'filming' | 'editing' | 'scheduled' | 'published';
   description?: string;

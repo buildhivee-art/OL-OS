@@ -8,17 +8,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, subDays, subYears, eachDayOfInterval, getDay, isSameDay, startOfYear, endOfYear, getMonth, getDate } from 'date-fns';
-import { TrendingUp, Zap, Target, Trophy, Activity, Calendar as CalendarIcon, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, Zap, Target, Trophy, Activity, Calendar as CalendarIcon, ArrowUpRight, Download, ExternalLink, Lightbulb, Flame, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, ComposedChart, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar,
-  Brush
+  Brush, ScatterChart as RechartsScatterChart, Scatter, ZAxis
 } from 'recharts';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { addDays } from 'date-fns';
 
 // --- Components ---
 
@@ -75,11 +77,12 @@ const Heatmap = ({ data, startDate, endDate }: { data: any[], startDate: Date, e
 
     // Determine intensity
     const getIntensity = (score: number) => {
-        if (score === 0) return 'bg-secondary/50'; 
-        if (score < 4) return 'bg-cyan-300 dark:bg-cyan-900/60';
-        if (score < 8) return 'bg-blue-400 dark:bg-blue-700/80';
-        if (score < 12) return 'bg-indigo-500 dark:bg-indigo-600';
-        return 'bg-violet-600 dark:bg-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.5)]';
+        if (score === 0) return 'bg-secondary/20'; // Empty
+        // GitHub-like blue progression
+        if (score < 4) return 'bg-blue-200 dark:bg-blue-950';    // Level 1
+        if (score < 8) return 'bg-blue-400 dark:bg-blue-800';    // Level 2
+        if (score < 12) return 'bg-blue-600 dark:bg-blue-600';   // Level 3
+        return 'bg-blue-800 dark:bg-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.5)]'; // Level 4 (Max)
     };
 
     return (
@@ -98,7 +101,7 @@ const Heatmap = ({ data, startDate, endDate }: { data: any[], startDate: Date, e
                         return (
                             <div 
                                 key={dateStr} 
-                                className={cn("h-3 w-3 rounded-sm transition-all hover:scale-125 hover:ring-2 ring-ring/50", getIntensity(score))}
+                                className={cn("h-3 w-3 rounded-[1px] transition-all hover:scale-125 hover:ring-2 ring-ring/50", getIntensity(score))}
                                 title={`${dateStr}: ${score} pts`}
                             />
                         );
@@ -116,10 +119,11 @@ export default function AnalyticsPage() {
   // Date State
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 89), 'yyyy-MM-dd')); // Default to 90 days for better heatmap
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [dateRangePreset, setDateRangePreset] = useState('90');
+  const [dateRangePreset, setDateRangePreset] = useState('30');
   const [scoreChartType, setScoreChartType] = useState<'bar' | 'line' | 'combined'>('combined');
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [showComparison, setShowComparison] = useState(false);
+  const [selectedHabitDetail, setSelectedHabitDetail] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCategories();
@@ -143,6 +147,23 @@ export default function AnalyticsPage() {
       
       setStartDate(format(start, 'yyyy-MM-dd'));
       setEndDate(format(end, 'yyyy-MM-dd'));
+  };
+
+  const exportToCSV = () => {
+      const headers = ['Date', 'Total Score', 'Weight', 'HP', ...tasks.map(t => `"Habit: ${t.title}"`)];
+      const rows = dailyData.map(d => {
+          const habitStatuses = tasks.map(t => logs[`${t._id}-${d.fullDate}`] ? '1' : '0');
+          return [d.fullDate, d.score, d.weight || '', d.hp || '', ...habitStatuses];
+      });
+      const csvContent = "data:text/csv;charset=utf-8," 
+          + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `habit_analytics_${endDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
   };
 
   useEffect(() => {
@@ -193,7 +214,7 @@ export default function AnalyticsPage() {
       days.forEach(day => {
           if (logs[`${task._id}-${format(day, 'yyyy-MM-dd')}`]) count++;
       });
-      return { name: task.title, value: count, category: task.category };
+      return { _id: task._id, name: task.title, value: count, category: task.category };
   }).filter(d => d.value > 0).sort((a,b) => b.value - a.value), [tasks, days, logs]);
 
   const categoryStats = useMemo(() => {
@@ -302,6 +323,10 @@ export default function AnalyticsPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-2 bg-background/50 backdrop-blur-sm p-1.5 rounded-lg border shadow-sm">
+            <Button variant="ghost" size="sm" className="h-9 px-2 text-muted-foreground hover:text-foreground" onClick={exportToCSV} title="Export to CSV">
+                <Download className="w-4 h-4" />
+            </Button>
+            <div className="w-px h-4 bg-border mx-1" />
             <Select value={dateRangePreset} onValueChange={handlePresetChange}>
                 <SelectTrigger className="w-[140px] h-9 bg-transparent border-none hover:bg-muted/50 transition-colors">
                     <SelectValue placeholder="Select Range" />
@@ -360,6 +385,77 @@ export default function AnalyticsPage() {
             colorClass="text-emerald-500"
         />
       </div>
+
+      {/* SMART INSIGHTS BANNER */}
+      {(() => {
+          // 1. Best Day of Week
+          const bestDayIndex = weekDayData.reduce((bestI, d, i, arr) => d.score > arr[bestI].score ? i : bestI, 0);
+          const bestDayName = weekDayData[bestDayIndex].subject;
+          
+          // 2. Rising Star (Improved Habit)
+          let risingStar = null;
+          let biggestDiff = 0;
+          tasks.forEach(t => {
+              const last7 = days.slice(-7);
+              const prev7 = days.slice(-14, -7);
+              const scoreLast = last7.filter(d => logs[`${t._id}-${format(d, 'yyyy-MM-dd')}`]).length;
+              const scorePrev = prev7.filter(d => logs[`${t._id}-${format(d, 'yyyy-MM-dd')}`]).length;
+              const diff = scoreLast - scorePrev;
+              if (diff > biggestDiff) {
+                  biggestDiff = diff;
+                  risingStar = t.title;
+              }
+          });
+
+          // 3. Neglected Area
+          const worstCategory = categoryProficiency.length > 0 ? categoryProficiency[categoryProficiency.length - 1].name : null;
+
+          if (!risingStar && !worstCategory) return null;
+
+          return (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-indigo-500/10 border border-indigo-500/20 p-4 rounded-lg flex items-start gap-3">
+                      <div className="p-2 bg-indigo-500/20 rounded-md text-indigo-500">
+                          <Lightbulb className="w-5 h-5" />
+                      </div>
+                      <div>
+                          <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">Peak Performance</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                             You are most productive on <span className="font-bold text-foreground">{bestDayName}s</span>.
+                          </p>
+                      </div>
+                  </div>
+
+                  {risingStar && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-lg flex items-start gap-3">
+                        <div className="p-2 bg-emerald-500/20 rounded-md text-emerald-500">
+                            <Flame className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Rising Star</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                <span className="font-bold text-foreground">{risingStar}</span> is seeing a {biggestDiff * 10}% boost this week.
+                            </p>
+                        </div>
+                    </div>
+                  )}
+
+                  {worstCategory && (
+                    <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg flex items-start gap-3">
+                        <div className="p-2 bg-amber-500/20 rounded-md text-amber-500">
+                            <AlertTriangle className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Room for Growth</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                <span className="font-bold text-foreground">{worstCategory}</span> habits are trailing behind.
+                            </p>
+                        </div>
+                    </div>
+                  )}
+              </div>
+          );
+      })()}
 
       {/* MAIN CHART SECTION */}
       <div className="grid gap-6 md:grid-cols-12">
@@ -624,6 +720,371 @@ export default function AnalyticsPage() {
              )}
          </div>
 
+
+         {/* STRATEGIC OVERVIEW (SCATTER & BALANCE) */}
+         <div className="grid gap-6 md:grid-cols-12 mb-8">
+            {/* 1. HABIT SYNERGY SCATTER PLOT */}
+            <Card className="col-span-12 lg:col-span-8 border-border/50 bg-background/60 backdrop-blur-xl h-full">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                            <Target className="h-5 w-5 text-indigo-500" />
+                            Habit Matrix
+                    </CardTitle>
+                    <CardDescription>
+                        Visualizing habits by Difficulty vs. Consistency to identify "Easy Wins" and "Money Pits".
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="h-[400px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <RechartsScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                                <XAxis type="number" dataKey="consistency" name="Consistency" unit="%" domain={[0, 100]} label={{ value: 'Consistency (%)', position: 'bottom', offset: 0 }} stroke="var(--color-muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                                <YAxis type="number" dataKey="difficultyScore" name="Difficulty" domain={[0, 3]} label={{ value: 'Difficulty (0-3)', angle: -90, position: 'insideLeft' }} stroke="var(--color-muted-foreground)" fontSize={12} tickLine={false} axisLine={false} ticks={[0,1,2,3]} tickFormatter={(v) => ['None','Easy','Med','Hard'][v]} />
+                                <ZAxis type="number" dataKey="impact" range={[100, 400]} />
+                                <Tooltip 
+                                    cursor={{ strokeDasharray: '3 3' }} 
+                                    content={({ active, payload }) => {
+                                        if (active && payload && payload.length) {
+                                            const data = payload[0].payload;
+                                            return (
+                                                <div className="bg-popover border border-border p-3 rounded-lg shadow-xl text-xs">
+                                                    <p className="font-bold text-sm mb-1">{data.name}</p>
+                                                    <p className="text-muted-foreground">Type: <span className={cn("font-medium", data.consistency > 80 ? "text-emerald-500" : data.consistency < 30 ? "text-rose-500" : "text-amber-500")}>
+                                                        {data.difficulty === 'Hard' && data.consistency > 80 ? '👑 Mastered' : 
+                                                         data.difficulty === 'Easy' && data.consistency > 80 ? '✅ Easy Win' :
+                                                         data.difficulty === 'Hard' && data.consistency < 50 ? '🏔️ Aspirational' : '🚧 In Progress'}
+                                                    </span></p>
+                                                    <p className="text-muted-foreground">Cons.: {data.consistency}%</p>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                />
+                                <Scatter name="Habits" data={tasks.map(t => {
+                                    let completed = 0;
+                                    days.forEach(d => { if(logs[`${t._id}-${format(d, 'yyyy-MM-dd')}`]) completed++; });
+                                    const consistency = days.length > 0 ? Math.round((completed / days.length) * 100) : 0;
+                                    const diffScore = t.difficulty === 'Hard' ? 3 : t.difficulty === 'Medium' ? 2 : 1;
+                                    return { 
+                                        _id: t._id, /* Added ID */
+                                        name: t.title, 
+                                        consistency, 
+                                        difficulty: t.difficulty, 
+                                        difficultyScore: diffScore, 
+                                        impact: 100 // Placeholder for impact size
+                                    };
+                                })} fill="#8884d8" onClick={(data: any) => {
+                                    if(data && data._id) setSelectedHabitDetail(data._id);
+                                }} style={{ cursor: 'pointer' }}>
+                                    {tasks.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={['#4ade80', '#fbbf24', '#f87171'][entry.difficulty === 'Easy' ? 0 : entry.difficulty === 'Medium' ? 1 : 2]} />
+                                    ))}
+                                </Scatter>
+                            </RechartsScatterChart>
+                        </ResponsiveContainer>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* 5. WHEEL OF BALANCE (Category Radar) replace Pie */}
+            <Card className="col-span-12 lg:col-span-4 border-border/50 bg-background/60 backdrop-blur-xl h-full">
+                <CardHeader>
+                    <CardTitle>Wheel of Balance</CardTitle>
+                    <CardDescription>Are you neglecting any area of your life?</CardDescription>
+                </CardHeader>
+                <CardContent className="flex items-center justify-center">
+                    <div className="h-[350px] w-full">
+                         <ResponsiveContainer width="100%" height="100%">
+                            <RadarChart cx="50%" cy="50%" outerRadius="70%" data={categoryProficiency}>
+                                <PolarGrid stroke="var(--color-border)" gridType="polygon" />
+                                <PolarAngleAxis dataKey="name" tick={{ fill: 'var(--color-muted-foreground)', fontSize: 11 }} />
+                                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                                <Radar name="Balance" dataKey="rate" stroke="#ec4899" fill="#ec4899" fillOpacity={0.4} />
+                                <Tooltip {...CHART_Tooltip} />
+                            </RadarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </CardContent>
+            </Card>
+         </div>
+
+         {/* CONSISTENCY & GROWTH SECTION */}
+         <div className="grid gap-6 md:grid-cols-12 mb-8">
+             
+             {/* 2. CUMULATIVE GROWTH CURVE */}
+             <Card className="col-span-12 lg:col-span-8 border-border/50 bg-background/60 backdrop-blur-xl">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-emerald-500" />
+                        Cumulative Growth
+                    </CardTitle>
+                    <CardDescription>Total volume of completed habits over time. "The 20-Mile March".</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="h-[300px] w-full">
+                         <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={(() => {
+                                let runningTotal = 0;
+                                return dailyData.map(d => {
+                                    runningTotal += d.score;
+                                    return { date: d.date, total: runningTotal };
+                                });
+                            })()}>
+                                <defs>
+                                    <linearGradient id="colorGrowth" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" opacity={0.3} />
+                                <XAxis dataKey="date" stroke="var(--color-muted-foreground)" fontSize={12} tickLine={false} axisLine={false} minTickGap={40} />
+                                <YAxis stroke="var(--color-muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                                <Tooltip {...CHART_Tooltip} />
+                                <Area type="monotone" dataKey="total" stroke="#10b981" strokeWidth={3} fill="url(#colorGrowth)" animationDuration={1500} />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </CardContent>
+             </Card>
+
+             {/* 4. VOLATILITY METER */}
+             <Card className="col-span-12 lg:col-span-4 border-border/50 bg-background/60 backdrop-blur-xl">
+                 <CardHeader>
+                     <CardTitle>Volatility Meter</CardTitle>
+                     <CardDescription>Are you "Boom & Bust" or "Steady"?</CardDescription>
+                 </CardHeader>
+                 <CardContent>
+                     {(() => {
+                         // Calculate Standard Deviation
+                         const mean = dailyData.reduce((acc, d) => acc + d.score, 0) / dailyData.length || 0;
+                         const variance = dailyData.reduce((acc, d) => acc + Math.pow(d.score - mean, 2), 0) / dailyData.length || 0;
+                         const stdDev = Math.sqrt(variance);
+                         const volatilityScore = Math.min(100, Math.round((stdDev / (mean || 1)) * 100)); // CV * 100 approx
+                         
+                         let status = "Steady";
+                         let color = "text-emerald-500";
+                         let advice = "Great consistency!";
+                         
+                         if (volatilityScore > 60) { status = "Chaotic"; color = "text-rose-500"; advice = "Try to lower your daily targets."; }
+                         else if (volatilityScore > 30) { status = "Variable"; color = "text-amber-500"; advice = "Avoid burnout days."; }
+
+                         return (
+                             <div className="flex flex-col items-center justify-center h-[250px] space-y-6">
+                                 <div className="relative w-48 h-24 overflow-hidden">
+                                     {/* Gauge Background */}
+                                     <div className="absolute w-48 h-48 rounded-full border-[12px] border-secondary border-t-transparent border-l-transparent -rotate-45" style={{ borderRadius: '50%' }}></div>
+                                     {/* Gauge Value */}
+                                     {/* Simplified visual rep using generic div rotation */}
+                                     <div className="w-full text-center mt-8">
+                                         <h3 className={cn("text-4xl font-black tracking-tighter", color)}>{volatilityScore}</h3>
+                                         <p className="text-muted-foreground text-sm uppercase tracking-widest font-medium">Volatility Index</p>
+                                     </div>
+                                 </div>
+                                 <div className="text-center space-y-2">
+                                     <Badge variant="outline" className={cn("text-base px-4 py-1", color, "bg-background")}>{status}</Badge>
+                                     <p className="text-xs text-muted-foreground max-w-[200px] mx-auto">{advice}</p>
+                                     <p className="text-[10px] text-muted-foreground/50 pt-2">Lower is better.</p>
+                                 </div>
+                             </div>
+                         );
+                     })()}
+                 </CardContent>
+             </Card>
+         </div>
+
+         {/* 3. NEW FEATURE TRIO: HALL OF FAME, PULSE, LEVEL */}
+         <div className="grid gap-6 md:grid-cols-12 mb-8">
+            
+            {/* FEATURE A: HALL OF FAME vs GRAVEYARD */}
+            <Card className="col-span-12 md:col-span-4 border-border/50 bg-background/60 backdrop-blur-xl">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Trophy className="h-5 w-5 text-amber-500" />
+                        Hall of Fame
+                    </CardTitle>
+                    <CardDescription>Your Best vs. Worst Habits</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div>
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-emerald-500 mb-3 flex items-center gap-2">
+                            <Zap className="w-3 h-3" /> Top Performers
+                        </h4>
+                        <div className="space-y-2">
+                            {habitPerformance.slice(0, 3).map((h, i) => (
+                                <div key={i} onClick={() => setSelectedHabitDetail(h._id)} className="flex justify-between items-center text-sm p-2 bg-emerald-500/5 rounded-md border border-emerald-500/10 cursor-pointer hover:bg-emerald-500/10 transition-colors">
+                                    <span className="font-medium truncate max-w-[140px]" title={h.name}>{h.name}</span>
+                                    <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-0">
+                                        {Math.round((h.value / days.length) * 100)}%
+                                    </Badge>
+                                </div>
+                            ))}
+                            {habitPerformance.length === 0 && <span className="text-muted-foreground text-xs">No data yet.</span>}
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 className="text-xs font-bold uppercase tracking-widest text-rose-500 mb-3 flex items-center gap-2">
+                            <Activity className="w-3 h-3" /> Needs Focus
+                        </h4>
+                        <div className="space-y-2">
+                            {[...habitPerformance].reverse().slice(0, 3).map((h, i) => (
+                                <div key={i} onClick={() => setSelectedHabitDetail(h._id)} className="flex justify-between items-center text-sm p-2 bg-rose-500/5 rounded-md border border-rose-500/10 cursor-pointer hover:bg-rose-500/10 transition-colors">
+                                    <span className="font-medium truncate max-w-[140px]" title={h.name}>{h.name}</span>
+                                    <Badge variant="secondary" className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-0">
+                                        {Math.round((h.value / days.length) * 100)}%
+                                    </Badge>
+                                </div>
+                            ))}
+                            {habitPerformance.length === 0 && <span className="text-muted-foreground text-xs">No data yet.</span>}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* FEATURE B: MONTHLY PULSE (Perfect Days Grid) */}
+            <Card className="col-span-12 md:col-span-4 border-border/50 bg-background/60 backdrop-blur-xl">
+                 <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <CalendarIcon className="h-5 w-5 text-indigo-500" />
+                        Monthly Pulse
+                    </CardTitle>
+                    <CardDescription>Visualizing "Perfect Days" (100% completion) over the last 30 days.</CardDescription>
+                 </CardHeader>
+                 <CardContent>
+                    <div className="grid grid-cols-7 gap-1">
+                        {['S','M','T','W','T','F','S'].map((d,i) => (
+                            <div key={i} className="text-[10px] text-center text-muted-foreground font-medium mb-1">{d}</div>
+                        ))}
+                        {(() => {
+                            // Last 30 days only
+                            const last30 = days.slice(-30);
+                            // Pad start if needed to match day of week? Simplified for now: just list 30 blobs
+                            // Actually better to align to day of week
+                            const startPad = new Array(getDay(last30[0])).fill(null);
+                            
+                            return [...startPad, ...last30].map((day, i) => {
+                                if (!day) return <div key={`pad-${i}`} />;
+                                const dateStr = format(day, 'yyyy-MM-dd');
+                                const dayData = dailyData.find(d => d.fullDate === dateStr);
+                                const isPerfect = dayData && dayData.score > 0 && tasks.length > 0 && (dayData.score / 2) === tasks.length;
+                                const intensity = dayData ? Math.min(1, dayData.score / (tasks.length * 2 || 1)) : 0;
+                                
+                                return (
+                                    <div 
+                                        key={dateStr}
+                                        className={cn(
+                                            "aspect-square rounded-sm flex items-center justify-center text-[10px] relative group cursor-default transition-all",
+                                            isPerfect ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-110 z-10 font-bold" : 
+                                            intensity > 0 ? "bg-indigo-500/20 text-indigo-700 dark:text-indigo-300" : "bg-secondary/30 text-muted-foreground/30"
+                                        )}
+                                        style={{ opacity: intensity > 0 && !isPerfect ? 0.3 + (intensity * 0.7) : 1 }}
+                                    >
+                                        {format(day, 'd')}
+                                        {/* Hover Tooltip */}
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-xs px-2 py-1 rounded shadow-xl border border-border opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap mb-1 z-20">
+                                            {dayData?.score || 0} pts
+                                        </div>
+                                    </div>
+                                );
+                            });
+                        })()}
+                    </div>
+                    <div className="mt-6 flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-sm bg-indigo-500 shadow shadow-indigo-500/30"></div>
+                            <span>Perfect Day</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                             <div className="w-2.5 h-2.5 rounded-sm bg-secondary/30"></div>
+                             <span>Rest</span>
+                        </div>
+                    </div>
+                 </CardContent>
+            </Card>
+
+            {/* FEATURE C: LEVEL & XP CARD */}
+            <Card className="col-span-12 md:col-span-4 border-border/50 bg-background/60 backdrop-blur-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                    <Trophy className="w-32 h-32 text-primary rotate-12" />
+                </div>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Zap className="h-5 w-5 text-yellow-500" />
+                        Level Progress
+                    </CardTitle>
+                    <CardDescription>Based on total historical score.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6 relative z-10">
+                    {(() => {
+                        // Simple gamification logic
+                        const totalLifetimeScore = totalScore; // Uses filtered range usually, ideally should use ALL time but we only have fetched range
+                        // Let's pretend each level is 1000 pts * 1.5 multiplier or something simple
+                        // Level N requires 100 * N^2 points? 
+                        // Lvl 1: 100, Lvl 2: 400, Lvl 3: 900, Lvl 10: 10000
+                        
+                        const getLevel = (xp: number) => Math.floor(Math.sqrt(xp / 100)) + 1;
+                        const getXpForNextLevel = (lvl: number) => 100 * Math.pow(lvl, 2);
+                        
+                        const currentLevel = getLevel(totalLifetimeScore);
+                        const nextLevelXp = getXpForNextLevel(currentLevel + 1); // Cost to reach next
+                        const prevLevelXp = getXpForNextLevel(currentLevel);     // Cost to reach current
+                        
+                        // Progress within level
+                        const levelProgress = totalLifetimeScore - prevLevelXp;
+                        const levelTotalNeeded = nextLevelXp - prevLevelXp;
+                        const percent = Math.min(100, Math.max(0, Math.round((levelProgress / levelTotalNeeded) * 100)));
+
+                        return (
+                            <>
+                                <div className="flex items-end justify-between">
+                                    <div className="text-5xl font-black tracking-tighter text-foreground">
+                                        {currentLevel}
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">Next Rank</p>
+                                        <p className="text-sm font-bold text-primary">{nextLevelXp - totalLifetimeScore} pts left</p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="h-3 w-full bg-secondary/50 rounded-full overflow-hidden border border-border/50">
+                                        <div 
+                                            className="h-full bg-gradient-to-r from-yellow-500 to-amber-500 transition-all duration-1000 ease-out relative" 
+                                            style={{ width: `${percent}%` }}
+                                        >
+                                            <div className="absolute inset-0 bg-white/20 animate-[shimmer_2s_infinite]"></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between text-[10px] text-muted-foreground font-medium">
+                                        <span>Current: {totalLifetimeScore} XP</span>
+                                        <span>Target: {nextLevelXp} XP</span>
+                                    </div>
+                                    <div className="text-[10px] text-center text-muted-foreground/60 pt-1">
+                                        {(() => {
+                                            const needed = nextLevelXp - totalLifetimeScore;
+                                            const dailyAvg = avgScore > 0 ? avgScore : 1; 
+                                            const daysLeft = Math.ceil(needed / dailyAvg);
+                                            const date = addDays(new Date(), daysLeft);
+                                            return `At current pace, you'll level up by ${format(date, 'MMM do, yyyy')}`;
+                                        })()}
+                                    </div>
+                                </div>
+                                
+                                <div className="p-3 bg-primary/5 border border-primary/10 rounded-lg">
+                                    <p className="text-xs text-primary/80 italic text-center">
+                                        "Consistency is the currency of mastery."
+                                    </p>
+                                </div>
+                            </>
+                        );
+                    })()}
+                </CardContent>
+            </Card>
+         </div>
+
+
          {/* COMPARISON VIEW */}
          {showComparison && selectedTasks.length > 0 && (
              <motion.div 
@@ -842,8 +1303,8 @@ export default function AnalyticsPage() {
                                         {completed}
                                     </td>
                                     <td className="p-4 text-right">
-                                        <Button size="icon" variant="ghost" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Activity className="h-4 w-4 text-muted-foreground" />
+                                        <Button size="icon" variant="ghost" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setSelectedHabitDetail(task._id)}>
+                                            <ExternalLink className="h-4 w-4 text-muted-foreground" />
                                         </Button>
                                     </td>
                                 </tr>
@@ -854,6 +1315,106 @@ export default function AnalyticsPage() {
             </div>
          </Card>
       </div>
+      
+      {/* 4. HABIT DETAIL REPORT CARD MODAL */}
+      <Dialog open={!!selectedHabitDetail} onOpenChange={(open) => !open && setSelectedHabitDetail(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              {(() => {
+                  const habit = tasks.find(t => t._id === selectedHabitDetail);
+                  if (!habit) return null;
+
+                  // Basic Stats for this habit
+                  let totalDone = 0;
+                  let currentStreak = 0;
+                  let maxHS = 0;
+                  const dayMap: Record<string, boolean> = {};
+
+                  days.forEach(d => {
+                      const dateStr = format(d, 'yyyy-MM-dd');
+                      if(logs[`${habit._id}-${dateStr}`]) {
+                          totalDone++;
+                          currentStreak++;
+                          dayMap[dateStr] = true;
+                      } else {
+                          currentStreak = 0;
+                          dayMap[dateStr] = false;
+                      }
+                      if(currentStreak > maxHS) maxHS = currentStreak;
+                  });
+                  const rate = days.length > 0 ? Math.round((totalDone / days.length) * 100) : 0;
+
+                  return (
+                      <>
+                        <DialogHeader>
+                            <div className="flex items-center gap-3">
+                                <div className={cn("p-2 rounded-lg bg-primary/10", (habit?.difficulty === 'Hard') ? "text-rose-500" : (habit?.difficulty === 'Medium') ? "text-amber-500" : "text-emerald-500")}>
+                                    <Target className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-2xl">{habit.title}</DialogTitle>
+                                    <DialogDescription>{habit.description || "No description provided."}</DialogDescription>
+                                </div>
+                            </div>
+                        </DialogHeader>
+                        
+                        <div className="space-y-6 py-4">
+                            {/* MINI STATS */}
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 text-center">
+                                    <div className="text-2xl font-bold">{rate}%</div>
+                                    <div className="text-xs text-muted-foreground uppercase tracking-wider">Consistency</div>
+                                </div>
+                                <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 text-center">
+                                    <div className="text-2xl font-bold text-amber-500">{currentStreak} <span className="text-xs text-muted-foreground font-normal">/ {maxHS}</span></div>
+                                    <div className="text-xs text-muted-foreground uppercase tracking-wider">Streak (Cur/Best)</div>
+                                </div>
+                                <div className="p-3 rounded-lg bg-secondary/30 border border-border/50 text-center">
+                                    <div className="text-2xl font-bold text-primary">{totalDone}</div>
+                                    <div className="text-xs text-muted-foreground uppercase tracking-wider">Total Done</div>
+                                </div>
+                            </div>
+
+                            {/* MINI HEATMAP for Single Habit */}
+                            <div className="border border-border/50 rounded-lg p-4 bg-background/50">
+                                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                                    <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+                                    History
+                                </h4>
+                                <div className="flex flex-wrap gap-1">
+                                    {days.slice(-60).map(d => { // Last 60 days
+                                        const done = dayMap[format(d, 'yyyy-MM-dd')];
+                                        return (
+                                            <div 
+                                                key={d.toISOString()} 
+                                                className={cn(
+                                                    "w-3 h-3 rounded-[1px]", 
+                                                    done ? "bg-primary" : "bg-secondary"
+                                                )} 
+                                                title={`${format(d, 'MMM dd')}: ${done ? 'Done' : 'Missed'}`}
+                                            />
+                                        )
+                                    })}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-2 text-right">Last 60 days</p>
+                            </div>
+
+                            {/* Metadata */}
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div className="p-3 rounded border border-border/50">
+                                    <span className="text-muted-foreground block text-xs">Category</span>
+                                    <span className="font-medium">{(typeof habit.category === 'object' && habit.category && 'name' in habit.category) ? (habit.category as any).name : 'Uncategorized'}</span>
+                                </div>
+                                <div className="p-3 rounded border border-border/50">
+                                    <span className="text-muted-foreground block text-xs">Difficulty</span>
+                                    <span className="font-medium">{habit.difficulty}</span>
+                                </div>
+                            </div>
+                        </div>
+                      </>
+                  );
+              })()}
+          </DialogContent>
+      </Dialog>
     </div>
   );
 }
