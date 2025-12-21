@@ -2,10 +2,19 @@
 import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Activity, X, Cpu, Zap, Hourglass, Dna, Sparkles, BrainCircuit } from 'lucide-react';
+import { Activity, X, Zap, CheckCircle2, Circle, ArrowRight, Wind, Sun, Moon, RefreshCw, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTaskStore } from '@/stores/taskStore';
+
+const MICRO_DIRECTIVES = [
+    { text: "Hydrate: 500ml Water", icon: "💧" },
+    { text: "Posture Check: Align Spine", icon: "🧘‍♂️" },
+    { text: "Vision Break: 20-20-20 Rule", icon: "👀" },
+    { text: "Clear Workspace: Zero Clutter", icon: "🧹" },
+    { text: "Deep Breath: 4-7-8 Pattern", icon: "🌬️" },
+    { text: "Stretch: Stand & Reach", icon: "🧍" },
+    { text: "Mindfulness: 60s Silence", icon: "🧠" },
+];
 
 export function RightSidebar({ 
     isOpen, 
@@ -20,7 +29,14 @@ export function RightSidebar({
 }) {
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const { tasks } = useTaskStore();
+  
+  // Stores
+  const { tasks, logs, toggleLog } = useTaskStore();
+  
+  // Local State
+  const [atmosphere, setAtmosphere] = useState<'focus' | 'energy' | 'zen'>('focus');
+  const [directive, setDirective] = useState<{ text: string; icon: string } | null>(null);
+  const [isSpinning, setIsSpinning] = useState(false);
 
   const startResizing = (mouseDownEvent: React.MouseEvent) => {
     mouseDownEvent.preventDefault();
@@ -50,17 +66,34 @@ export function RightSidebar({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing]);
+  }, [isResizing, onWidthChange]);
 
-  // Quick Stats / Data (Mocked or Real)
-  const todayTasks = tasks.filter(t => t.active); 
+  // DATA SELECTORS
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const activeTasks = tasks.filter(t => t.active);
+  // Sort by active status (incomplete first) then priority/order
+  const queueTasks = activeTasks
+      .filter(t => !logs[`${t._id}-${todayStr}`]) // Only incomplete
+      .slice(0, 5); // Take top 5
+
+  // Synchronicity Logic
+  const generateDirective = () => {
+      setIsSpinning(true);
+      setDirective(null);
+      // Fake spin delay
+      setTimeout(() => {
+          const random = MICRO_DIRECTIVES[Math.floor(Math.random() * MICRO_DIRECTIVES.length)];
+          setDirective(random);
+          setIsSpinning(false);
+      }, 800);
+  };
 
   if (!isOpen) return null;
 
   return (
     <div 
         ref={sidebarRef}
-        className="fixed inset-y-0 right-0 z-40 bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-zinc-800 shadow-xl flex flex-col"
+        className="fixed inset-y-0 right-0 z-40 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-xl border-l border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col"
         style={{ width: `${width}px` }}
     >
       {/* Drag Handle */}
@@ -70,10 +103,10 @@ export function RightSidebar({
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800">
-          <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+      <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-100/50 dark:bg-zinc-900/50">
+          <h3 className="font-bold text-xs uppercase tracking-widest text-muted-foreground flex items-center gap-2">
               <Activity className="w-4 h-4" />
-              Widgets
+              System Overlay
           </h3>
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
               <X className="w-4 h-4" />
@@ -81,137 +114,134 @@ export function RightSidebar({
       </div>
 
       {/* Content Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-8 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
           
-          {/* 1. THE LIFE KERNEL (System Monitor) */}
+          {/* 1. ATMOSPHERE CONTROL */}
           <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-primary/70">
+              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-zinc-500">
                   <div className="flex items-center gap-2">
-                       <Cpu className="w-4 h-4" />
-                       <span>System Kernel</span>
-                  </div>
-                  <span className="animate-pulse text-emerald-500">⚫ ONLINE</span>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800">
-                      <div className="text-[10px] uppercase text-muted-foreground mb-1">Cognitive Load</div>
-                      <div className="text-2xl font-black font-mono flex items-baseline gap-1">
-                          {Math.min(100, tasks.filter(t => t.active).length * 12)}<span className="text-sm text-muted-foreground">%</span>
-                      </div>
-                      <Progress value={Math.min(100, tasks.filter(t => t.active).length * 12)} className="h-1 mt-2" />
-                  </div>
-                   <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-lg border border-zinc-200 dark:border-zinc-800">
-                      <div className="text-[10px] uppercase text-muted-foreground mb-1">System Uptime</div>
-                      <div className="text-xl font-black font-mono">
-                          14<span className="text-sm text-muted-foreground">h</span> 12<span className="text-sm text-muted-foreground">m</span>
-                      </div>
-                      <div className="flex gap-0.5 mt-2.5">
-                          {[1,1,1,1,1,0,0,0].map((v, i) => (
-                              <div key={i} className={cn("h-1 w-full rounded-full", v ? "bg-emerald-500" : "bg-zinc-700")} />
-                          ))}
-                      </div>
+                       <Wind className="w-3 h-3" />
+                       <span>Atmosphere</span>
                   </div>
               </div>
               
-              <div className="p-3 rounded-lg bg-zinc-950 border border-zinc-800 relative overflow-hidden group cursor-pointer hover:border-red-500/50 transition-colors">
-                   <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10" />
-                   <div className="relative z-10 flex items-center justify-between">
-                       <div>
-                           <div className="text-[10px] uppercase font-bold text-red-500 tracking-widest mb-0.5">Overclock</div>
-                           <div className="text-xs text-zinc-400">Boost focus metrics by 150%</div>
-                       </div>
-                       <Zap className="w-5 h-5 text-zinc-700 group-hover:text-red-500 transition-colors" />
-                   </div>
-              </div>
-          </div>
+              <div className={cn(
+                  "rounded-xl p-5 relative overflow-hidden transition-all duration-500 border border-white/5",
+                  atmosphere === 'focus' ? "bg-indigo-950/50 from-indigo-900/50 to-blue-900/50" : 
+                  atmosphere === 'energy' ? "bg-amber-950/50 from-amber-900/50 to-orange-900/50" : 
+                  "bg-emerald-950/50 from-emerald-900/50 to-teal-900/50"
+              )}>
+                  <div className={cn("absolute inset-0 bg-gradient-to-br opacity-50 transition-all duration-500", 
+                       atmosphere === 'focus' ? "from-indigo-500/20 to-blue-500/20" : 
+                       atmosphere === 'energy' ? "from-amber-500/20 to-orange-500/20" : 
+                       "from-emerald-500/20 to-teal-500/20"
+                  )} />
 
-          <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" />
-
-          {/* 2. THE ENTROPY GAUGE (Memento Mori) */}
-          <div className="space-y-4">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary/70">
-                   <Hourglass className="w-4 h-4" />
-                   <span>Entropy Gauge</span>
-              </div>
-              
-              <div className="space-y-4">
-                  {/* Year Progress */}
-                  <div className="space-y-1">
-                      <div className="flex justify-between text-[10px] uppercase font-bold">
-                          <span>Year Progress (2025)</span>
-                          <span className="font-mono text-muted-foreground">
-                              {/* Rough calculation for demonstration */}
-                              {((new Date().getTime() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24 * 365) * 100).toFixed(4)}%
-                          </span>
+                  <div className="relative z-10 flex flex-col gap-4">
+                      <div className="flex justify-between items-center bg-black/20 p-1 rounded-lg">
+                          <button onClick={() => setAtmosphere('focus')} className={cn("p-2 rounded-md transition-all", atmosphere === 'focus' ? "bg-white/20 text-white shadow-sm" : "text-zinc-400 hover:text-white")} title="Deep Focus">
+                             <Moon className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setAtmosphere('energy')} className={cn("p-2 rounded-md transition-all", atmosphere === 'energy' ? "bg-white/20 text-white shadow-sm" : "text-zinc-400 hover:text-white")} title="High Energy">
+                             <Sun className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => setAtmosphere('zen')} className={cn("p-2 rounded-md transition-all", atmosphere === 'zen' ? "bg-white/20 text-white shadow-sm" : "text-zinc-400 hover:text-white")} title="Rest & Recovery">
+                             <Wind className="w-4 h-4" />
+                          </button>
                       </div>
-                      <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-900 rounded-sm overflow-hidden border border-zinc-200 dark:border-zinc-800">
-                          <div 
-                              className="h-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" 
-                              style={{ width: `${((new Date().getTime() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24 * 365) * 100)}%` }}
-                          />
-                      </div>
-                  </div>
-
-                   {/* Day Progress */}
-                   <div className="space-y-1">
-                      <div className="flex justify-between text-[10px] uppercase font-bold">
-                          <span>Day Remaining</span>
-                          <span className="font-mono text-muted-foreground">
-                              {/* Remaining hours */}
-                              {(24 - new Date().getHours() - (new Date().getMinutes()/60)).toFixed(1)} hrs
-                          </span>
-                      </div>
-                      <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-900 rounded-sm overflow-hidden border border-zinc-200 dark:border-zinc-800">
-                           <div 
-                              className="h-full bg-zinc-800 dark:bg-zinc-200" 
-                              style={{ width: `${((new Date().getHours() * 60 + new Date().getMinutes()) / (24 * 60)) * 100}%` }}
-                          />
-                      </div>
-                  </div>
-
-                  {/* Life Expectancy (The Scary Number) */}
-                  <div className="p-3 bg-zinc-100 dark:bg-white/5 rounded-lg text-center space-y-1">
-                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Expected Life Completion</div>
-                      <div className="text-3xl font-black font-mono tracking-tighter text-foreground">
-                          34<span className="text-zinc-400">.02154%</span>
+                      
+                      <div className="text-center">
+                          <h4 className="text-white font-bold text-sm tracking-wide">
+                              {atmosphere === 'focus' ? "Deep Focus Protocol" : atmosphere === 'energy' ? "Kinetic Energy Mode" : "Zen Restoration"}
+                          </h4>
+                          <p className="text-[10px] text-white/50 mt-1">
+                              {atmosphere === 'focus' ? "Optimizing cognitive load." : atmosphere === 'energy' ? "Maximizing output velocity." : "Reducing system entropy."}
+                          </p>
                       </div>
                   </div>
               </div>
           </div>
 
-          <div className="h-[1px] bg-zinc-100 dark:bg-zinc-800" />
+          <div className="h-[1px] bg-zinc-200 dark:bg-zinc-800" />
 
-          {/* 3. THE ORACLE (Randomness Engine) */}
+          {/* 2. TACTICAL QUEUE */}
           <div className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary/70">
-                   <Dna className="w-4 h-4" />
-                   <span>The Oracle</span>
+              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                   <div className="flex items-center gap-2">
+                       <Zap className="w-3 h-3" />
+                       <span>Tactical Queue</span>
+                   </div>
+                   <span className="text-zinc-600">{queueTasks.length} PENDING</span>
               </div>
-
-              <div className="grid grid-cols-1 gap-2">
-                  <Button variant="outline" className="h-auto py-3 px-4 flex items-center justify-between group hover:border-primary/50 transition-all">
-                      <div className="text-left">
-                          <div className="text-xs font-bold uppercase">Summon Quest</div>
-                          <div className="text-[10px] text-muted-foreground">Activate a random backlog task</div>
+              
+              <div className="space-y-2">
+                  {queueTasks.length === 0 ? (
+                      <div className="p-4 text-center border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg">
+                          <p className="text-xs text-muted-foreground">All systems nominal. Queue empty.</p>
                       </div>
-                      <Sparkles className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
-                  </Button>
-                  
-                  <Button variant="outline" className="h-auto py-3 px-4 flex items-center justify-between group hover:border-primary/50 transition-all">
-                      <div className="text-left">
-                          <div className="text-xs font-bold uppercase">Memory Recall</div>
-                          <div className="text-[10px] text-muted-foreground">Surface a past journal entry</div>
-                      </div>
-                      <BrainCircuit className="w-4 h-4 text-purple-500 group-hover:scale-110 transition-transform" />
-                  </Button>
+                  ) : (
+                      queueTasks.map(task => (
+                          <div key={task._id} className="group flex items-start gap-3 p-3 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:border-primary/50 transition-colors">
+                              <button 
+                                onClick={() => toggleLog(task._id, todayStr)}
+                                className="mt-0.5 text-zinc-400 hover:text-green-500 transition-colors"
+                              >
+                                  <Circle className="w-4 h-4" />
+                              </button>
+                              <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium leading-none truncate">{task.title}</p>
+                                  <p className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1">
+                                      <span className={cn(
+                                          "w-1.5 h-1.5 rounded-full",
+                                          task.difficulty === 'Hard' ? 'bg-red-500' :
+                                          task.difficulty === 'Medium' ? 'bg-amber-500' : 'bg-blue-500'
+                                      )} />
+                                      {task.difficulty} Priority
+                                  </p>
+                              </div>
+                              <ArrowRight className="w-4 h-4 text-zinc-700 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0" />
+                          </div>
+                      ))
+                  )}
               </div>
+          </div>
 
-              {/* Oblique Strategy Card */}
-              <div className="mt-2 p-4 bg-zinc-900 text-zinc-100 rounded-lg text-center relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 to-purple-500" />
-                  <p className="text-xs font-serif italic opacity-80 mb-2">"Oblique Strategy"</p>
-                  <p className="font-bold text-sm">Honor thy error as a hidden intention.</p>
+          <div className="h-[1px] bg-zinc-200 dark:bg-zinc-800" />
+
+          {/* 3. SYNCHRONICITY ENGINE */}
+          <div className="space-y-3">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                   <RefreshCw className="w-3 h-3" />
+                   <span>Synchronicity Engine</span>
+              </div>
+              
+              <div className="bg-zinc-100 dark:bg-zinc-900 rounded-xl p-6 border border-zinc-200 dark:border-zinc-800 text-center relative overflow-hidden">
+                  {!directive ? (
+                      <div className="py-2">
+                          <Button 
+                              size="lg" 
+                              className={cn("w-full transition-all duration-500", isSpinning ? "opacity-50 scale-95" : "")} 
+                              onClick={generateDirective}
+                              disabled={isSpinning}
+                          >
+                             {isSpinning ? "Calibrating..." : "Generate Directive"}
+                          </Button>
+                          <p className="text-[10px] text-muted-foreground mt-2">Activate random micro-optimization.</p>
+                      </div>
+                  ) : (
+                      <div className="animate-in zoom-in slide-in-from-bottom-2 duration-300">
+                          <div className="text-4xl mb-2">{directive.icon}</div>
+                          <h4 className="font-bold text-lg">{directive.text}</h4>
+                          <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="mt-4 gap-2 hover:bg-green-500 hover:text-white hover:border-green-500 transition-colors"
+                              onClick={() => setDirective(null)}
+                          >
+                              <Check className="w-4 h-4" /> Complete
+                          </Button>
+                      </div>
+                  )}
               </div>
           </div>
 
