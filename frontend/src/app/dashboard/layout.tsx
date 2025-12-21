@@ -8,6 +8,8 @@ import PageTransition from '@/components/PageTransition';
 import { cn } from '@/lib/utils';
 import { CommandMenu } from '@/components/CommandMenu';
 
+import { BootSequence } from '@/components/BootSequence';
+
 export default function DashboardLayout({
   children,
 }: {
@@ -15,6 +17,8 @@ export default function DashboardLayout({
 }) {
   const { isHydrated } = useAuthStore();
   const [mounted, setMounted] = useState(false);
+  const [showBoot, setShowBoot] = useState(false);
+  
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   
@@ -24,7 +28,17 @@ export default function DashboardLayout({
 
   useEffect(() => {
     setMounted(true);
+    // Check if we've booted this session
+    const hasBooted = sessionStorage.getItem('ol-os-booted');
+    if (!hasBooted) {
+        setShowBoot(true);
+        sessionStorage.setItem('ol-os-booted', 'true');
+    }
   }, []);
+
+  const handleBootComplete = () => {
+    setShowBoot(false);
+  };
 
   if (!mounted || !isHydrated) {
     return null; 
@@ -32,6 +46,7 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      {showBoot && <BootSequence onComplete={handleBootComplete} />}
       <CommandMenu />
       
       {/* Mobile Sidebar Overlay */}
