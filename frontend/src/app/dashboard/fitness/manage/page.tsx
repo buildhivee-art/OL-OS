@@ -340,185 +340,202 @@ function RoutineDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw]">
-                <DialogHeader>
-                    <div className="flex items-center gap-3">
-                        <div className="p-3 bg-emerald-500/10 rounded-full text-emerald-500">
-                             <Activity className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <DialogTitle className="text-xl">{initialData ? 'Edit Protocol' : 'Design Protocol'}</DialogTitle>
-                            <DialogDescription>Configure the parameters for this workout routine.</DialogDescription>
-                        </div>
-                    </div>
-                </DialogHeader>
+            <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-0 overflow-hidden bg-zinc-50 dark:bg-zinc-950/95 backdrop-blur-xl border-zinc-200 dark:border-zinc-800 shadow-2xl rounded-2xl">
+                
+                {/* TOOLBAR HEADER */}
+                <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-zinc-900/80 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50 backdrop-blur-md">
+                     <div className="flex items-center gap-3">
+                         <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                             <Activity className="h-6 w-6" />
+                         </div>
+                         <div className="flex flex-col">
+                             <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Protocol Editor</span>
+                             <span className="text-sm font-semibold">{initialData ? 'Editing Routine' : 'New Routine'}</span>
+                         </div>
+                     </div>
+                     <div className="flex items-center gap-2">
+                         <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+                         <Button size="sm" onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 rounded-full shadow-lg shadow-emerald-500/20">
+                             <Save className="w-4 h-4 mr-2" /> Save Changes
+                         </Button>
+                     </div>
+                </div>
 
-                <div className="grid gap-8 py-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* SCROLLABLE CONTENT */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="max-w-3xl mx-auto py-12 px-6 space-y-12">
                         
-                        {/* LEFT COLUMN: Metadata */}
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Protocol Identity</Label>
+                        {/* SECTION 1: IDENTITY */}
+                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <div className="space-y-4">
                                 <Input 
-                                    className="text-lg font-bold h-12" 
-                                    placeholder="e.g. Hypertrophy A (Push)" 
+                                    className="text-4xl md:text-5xl font-black h-auto bg-transparent border-0 px-0 focus-visible:ring-0 placeholder:text-zinc-300 dark:placeholder:text-zinc-700" 
+                                    placeholder="Untitled Protocol" 
                                     value={name} 
                                     onChange={e => setName(e.target.value)} 
                                 />
-                            </div>
-                            
-                            <div className="space-y-3">
-                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Weekly Schedule</Label>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-2 pt-2">
                                     {DAYS.map(day => (
-                                        <div
+                                        <button
                                             key={day}
-                                            className={cn(
-                                                "cursor-pointer px-3 py-1.5 rounded-md text-xs font-medium transition-all border",
-                                                selectedDays.includes(day) 
-                                                    ? "bg-emerald-500 text-white border-emerald-600 shadow-md shadow-emerald-500/20" 
-                                                    : "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-muted-foreground hover:border-zinc-400"
-                                            )}
                                             onClick={() => toggleDay(day)}
+                                            className={cn(
+                                                "px-4 py-2 rounded-full text-xs font-bold transition-all border",
+                                                selectedDays.includes(day) 
+                                                    ? "bg-black dark:bg-white text-white dark:text-black border-transparent scale-105" 
+                                                    : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:border-zinc-400"
+                                            )}
                                         >
                                             {day}
-                                        </div>
+                                        </button>
                                     ))}
                                 </div>
                             </div>
                             
-                            <div className="space-y-2">
-                                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tactical Notes</Label>
+                            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-sm">
+                                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 block">Briefing</Label>
                                 <Textarea 
-                                    placeholder="Briefing instructions, focus points, or cues..." 
+                                    placeholder="Enter strategic notes, warm-up protocols, or focus cues..." 
                                     value={notes} 
                                     onChange={e => setNotes(e.target.value)} 
-                                    className="h-32 resize-none bg-zinc-50 dark:bg-zinc-900/50" 
+                                    className="h-24 resize-none bg-transparent border-0 px-0 focus-visible:ring-0 text-zinc-600 dark:text-zinc-300 placeholder:opacity-50" 
                                 />
                             </div>
                         </div>
 
-                        {/* RIGHT COLUMN: Exercises */}
-                        <div className="space-y-4 flex flex-col h-[500px]">
-                             <div className="flex items-center justify-between">
-                                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Exercise Sequence</Label>
-                                 <Button size="sm" onClick={addExercise} className="bg-emerald-600 hover:bg-emerald-700 text-white"><Plus className="w-3 h-3 mr-1" /> Add Exercise</Button>
-                             </div>
-                             
-                             <div className="space-y-4 overflow-y-auto pr-2 custom-scrollbar flex-1 bg-zinc-50 dark:bg-zinc-900/20 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                                 {exercises.length === 0 && (
-                                     <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-2">
-                                         <Dumbbell className="w-12 h-12 opacity-20" />
-                                         <p className="text-sm">No exercises added yet.</p>
-                                     </div>
-                                 )}
-                                 {exercises.map((ex, i) => (
-                                     <Card key={i} className="border-0 shadow-lg bg-white dark:bg-zinc-900 overflow-hidden ring-1 ring-zinc-200 dark:ring-zinc-800">
-                                         {/* Exercise Header */}
-                                         <div className="p-3 bg-zinc-100 dark:bg-zinc-800/50 flex gap-3 border-b border-zinc-100 dark:border-zinc-800">
-                                             <div className="flex items-center justify-center w-8 h-8 rounded bg-white dark:bg-zinc-800 text-xs font-bold shadow-sm">{i + 1}</div>
-                                             <div className="flex-1">
-                                                 <Input 
-                                                    list="exercises-list"
-                                                    className="h-8 font-bold border-transparent bg-transparent focus-visible:ring-0 px-0 shadow-none text-base" 
-                                                    placeholder="Exercise Name..." 
-                                                    value={ex.name} 
-                                                    onChange={e => updateExercise(i, 'name', e.target.value)}
-                                                 />
-                                             </div>
-                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-destructive" onClick={() => removeExercise(i)}>
-                                                 <X className="w-4 h-4" />
-                                             </Button>
-                                         </div>
-                                         
-                                         <div className="p-4 space-y-4">
-                                              {/* Quick Schemes */}
-                                              <div className="flex gap-2 pb-2 overflow-x-auto no-scrollbar">
-                                                  {SET_SCHEMES.map(scheme => (
-                                                      <button 
-                                                        key={scheme.label}
-                                                        onClick={() => applyScheme(i, scheme.sets, scheme.reps)}
-                                                        className="px-2 py-1 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded text-[10px] font-medium hover:bg-emerald-500 hover:text-white hover:border-emerald-600 transition-colors whitespace-nowrap"
-                                                      >
-                                                          {scheme.label}
-                                                      </button>
-                                                  ))}
-                                              </div>
+                        <div className="w-full h-px bg-zinc-200 dark:bg-zinc-800" />
 
-                                              <div className="space-y-2">
-                                                  <div className="grid grid-cols-12 gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider text-center mb-1">
-                                                      <div className="col-span-2">Set</div>
-                                                      <div className="col-span-4">Weight (lbs)</div>
-                                                      <div className="col-span-4">Reps</div>
-                                                      <div className="col-span-2"></div>
+                        {/* SECTION 2: EXERCISES */}
+                        <div className="space-y-8">
+                             <div className="flex items-center justify-between">
+                                 <h3 className="text-xl font-bold flex items-center gap-2">
+                                     <Dumbbell className="w-5 h-5 text-emerald-500" /> Sequence
+                                     <span className="text-sm font-normal text-muted-foreground ml-2">{exercises.length} Exercises</span>
+                                 </h3>
+                             </div>
+
+                             <div className="space-y-6">
+                                 {exercises.map((ex, i) => (
+                                     <div key={i} className="group relative bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm transition-all hover:shadow-xl hover:border-zinc-300 dark:hover:border-zinc-700">
+                                         
+                                         {/* DRAG HANDLE / RANK */}
+                                         <div className="absolute left-0 top-0 bottom-0 w-12 flex items-center justify-center border-r border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 rounded-l-2xl">
+                                             <span className="text-zinc-400 font-mono font-bold text-lg">{i + 1}</span>
+                                         </div>
+
+                                         <div className="pl-12">
+                                             {/* CARD HEADER */}
+                                             <div className="p-6 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center border-b border-zinc-100 dark:border-zinc-800">
+                                                  <div className="flex-1 w-full">
+                                                      <Input 
+                                                         list="exercises-list"
+                                                         className="text-xl font-bold border-0 p-0 h-auto bg-transparent focus-visible:ring-0 placeholder:text-zinc-300"
+                                                         placeholder="Exercise Name..."
+                                                         value={ex.name}
+                                                         onChange={e => updateExercise(i, 'name', e.target.value)}
+                                                      />
                                                   </div>
-                                                  {ex.sets.map((set, si) => (
-                                                      <div key={si} className="grid grid-cols-12 gap-2 items-center">
-                                                          <div className="col-span-2 flex justify-center">
-                                                              <div className="w-5 h-5 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-[10px]">{si + 1}</div>
-                                                          </div>
-                                                          <div className="col-span-4">
-                                                              <Input 
-                                                                 type="number" 
-                                                                 className="h-7 text-center text-xs" 
-                                                                 placeholder="0"
-                                                                 value={set.weight || ''}
-                                                                 onChange={e => updateSet(i, si, 'weight', parseFloat(e.target.value))}
-                                                              />
-                                                          </div>
-                                                          <div className="col-span-4">
-                                                              <Input 
-                                                                 type="number" 
-                                                                 className="h-7 text-center text-xs" 
-                                                                 placeholder="0"
-                                                                 value={set.reps || ''}
-                                                                 onChange={e => updateSet(i, si, 'reps', parseFloat(e.target.value))}
-                                                              />
-                                                          </div>
-                                                          <div className="col-span-2 flex justify-center">
-                                                              <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-300 hover:text-destructive" onClick={() => removeSet(i, si)}>
-                                                                  <X className="w-3 h-3" />
+                                                  
+                                                  <div className="flex items-center gap-3">
+                                                      <div className="flex bg-zinc-100 dark:bg-zinc-800 rounded-lg p-1">
+                                                          {SET_SCHEMES.map(scheme => (
+                                                              <button 
+                                                                key={scheme.label}
+                                                                onClick={() => applyScheme(i, scheme.sets, scheme.reps)}
+                                                                className="px-3 py-1.5 rounded-md text-[10px] font-bold hover:bg-white dark:hover:bg-zinc-700 hover:shadow-sm transition-all text-muted-foreground hover:text-primary"
+                                                              >
+                                                                  {scheme.label}
+                                                              </button>
+                                                          ))}
+                                                      </div>
+                                                      <Button variant="ghost" size="icon" className="hover:bg-red-50 hover:text-red-500 transition-colors" onClick={() => removeExercise(i)}>
+                                                          <Trash2 className="w-4 h-4" />
+                                                      </Button>
+                                                  </div>
+                                             </div>
+
+                                             {/* SETS PANE */}
+                                             <div className="p-6 bg-zinc-50/50 dark:bg-zinc-900/30 rounded-br-2xl">
+                                                  <div className="space-y-3">
+                                                      {ex.sets.map((set, si) => (
+                                                          <div key={si} className="flex items-center gap-4 group/set">
+                                                              <div className="w-8 text-[10px] font-bold text-center text-zinc-400 uppercase tracking-widest">Set {si + 1}</div>
+                                                              
+                                                              <div className="flex-1 grid grid-cols-2 gap-4">
+                                                                  <div className="relative">
+                                                                      <Input 
+                                                                         type="number"
+                                                                         className="pl-8 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                                                                         placeholder="0"
+                                                                         value={set.weight || ''}
+                                                                         onChange={e => updateSet(i, si, 'weight', parseFloat(e.target.value))}
+                                                                      />
+                                                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">LB</span>
+                                                                  </div>
+                                                                  <div className="relative">
+                                                                      <Input 
+                                                                         type="number"
+                                                                         className="pl-8 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+                                                                         placeholder="0"
+                                                                         value={set.reps || ''}
+                                                                         onChange={e => updateSet(i, si, 'reps', parseFloat(e.target.value))}
+                                                                      />
+                                                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-400">x</span>
+                                                                  </div>
+                                                              </div>
+
+                                                              <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-300 opacity-0 group-hover/set:opacity-100 hover:text-red-500 transition-all" onClick={() => removeSet(i, si)}>
+                                                                  <X className="w-4 h-4" />
                                                               </Button>
                                                           </div>
-                                                      </div>
-                                                  ))}
-                                                  <Button variant="ghost" size="sm" className="w-full h-7 text-xs border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-emerald-500 hover:text-emerald-500 mt-2" onClick={() => addSet(i)}>
-                                                      <Plus className="w-3 h-3 mr-1" /> Add Set
+                                                      ))}
+                                                  </div>
+                                                  <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="mt-4 text-xs font-bold uppercase tracking-widest text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700" 
+                                                    onClick={() => addSet(i)}
+                                                  >
+                                                      <Plus className="w-3 h-3 mr-2" /> Add Set
                                                   </Button>
-                                              </div>
+                                             </div>
                                          </div>
-                                     </Card>
+                                     </div>
                                  ))}
+
+                                 <button 
+                                    onClick={addExercise}
+                                    className="w-full py-8 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl flex flex-col items-center justify-center text-zinc-400 hover:text-emerald-500 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group"
+                                 >
+                                     <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 group-hover:bg-emerald-500 group-hover:text-white flex items-center justify-center mb-2 transition-colors">
+                                         <Plus className="w-6 h-6" />
+                                     </div>
+                                     <span className="font-bold text-sm uppercase tracking-widest">Add Movement</span>
+                                 </button>
                              </div>
                         </div>
+
                     </div>
                 </div>
+                
+                {initialData && (
+                     <div className="absolute bottom-6 left-6">
+                        <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="text-red-500 hover:bg-red-50 hover:text-red-600 opacity-50 hover:opacity-100 transition-opacity"
+                            onClick={onDelete}
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete Protocol
+                        </Button>
+                     </div>
+                )}
                 
                 {/* Datalist for autocomplete */}
                 <datalist id="exercises-list">
                     {POPULAR_EXERCISES.map(ex => <option key={ex} value={ex} />)}
                 </datalist>
 
-                <DialogFooter className="flex sm:justify-between border-t border-zinc-100 dark:border-zinc-800 pt-4 gap-2">
-                    {initialData ? (
-                        <Button 
-                            variant="ghost" 
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            onClick={onDelete}
-                        >
-                            <Trash2 className="w-4 h-4 mr-2" /> Delete Protocol
-                        </Button>
-                    ) : (
-                        <div /> /* Spacer */
-                    )}
-                    <div className="flex gap-2">
-                        <Button variant="ghost" onClick={() => onOpenChange(false)}>Discard</Button>
-                        <Button onClick={handleSave} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[150px]">
-                            <Save className="w-4 h-4 mr-2" /> Save Protocol
-                        </Button>
-                    </div>
-                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
