@@ -1,9 +1,10 @@
-
 'use client';
 
 import { useAuthStore } from '@/stores/authStore';
 import { useTaskStore } from '@/stores/taskStore';
 import { useFinanceStore } from '@/stores/financeStore';
+import { useWorkoutStore } from '@/stores/workoutStore';
+import { useContentStore } from '@/stores/contentStore';
 import { useSettingsStore, formatCurrencyValue } from '@/stores/settingsStore';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -11,15 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Target, Zap, LayoutList, Trophy, Flame, Calendar, ArrowRight, Share2, Crown, Wallet, CheckCircle2, Circle, Quote, TrendingUp, ImageIcon, Grid, Headphones } from 'lucide-react';
-import { format, subDays } from 'date-fns';
+import { Activity, Target, Zap, LayoutList, Trophy, Flame, Calendar, ArrowRight, Share2, Crown, Wallet, CheckCircle2, Circle, Quote, TrendingUp, ImageIcon, Grid, Headphones, Dumbbell, Video } from 'lucide-react';
+import { format, subDays, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
-
-const VISIONS = [
-    { title: "The Headquarters", image: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=800&q=80", caption: "Minimalist workspace with zero distractions." },
-    { title: "Peak Physique", image: "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&q=80", caption: "Capable of 75 HARD." },
-    { title: "Deep Freedom", image: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=80", caption: "Traveling without asking for permission." }
-];
 
 const QUOTES = [
   { text: "We are what we repeatedly do. Excellence, then, is not an act, but a habit.", author: "Aristotle" },
@@ -45,6 +40,8 @@ export default function DashboardPage() {
   const { user, isAuthenticated } = useAuthStore();
   const { tasks, logs, fetchTasks, fetchLogs, toggleLog } = useTaskStore();
   const { summary, fetchSummary } = useFinanceStore();
+  const { workouts, fetchWorkouts } = useWorkoutStore();
+  const { contents, fetchContents } = useContentStore();
   const { currency } = useSettingsStore();
   const router = useRouter();
   
@@ -62,6 +59,8 @@ export default function DashboardPage() {
     
     fetchTasks();
     fetchSummary();
+    fetchWorkouts();
+    fetchContents();
     
     // Fetch logs for stats
     const end = new Date();
@@ -77,7 +76,7 @@ export default function DashboardPage() {
     return () => {
         clearInterval(timer);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchTasks, fetchSummary, fetchWorkouts, fetchContents, fetchLogs]);
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
 
@@ -171,12 +170,21 @@ export default function DashboardPage() {
     };
   }, [tasks, logs]);
 
+  // Content Stats
+  const contentStats = useMemo(() => {
+      const ideas = contents.filter(c => c.status === 'idea').length;
+      const inProgress = contents.filter(c => ['scripting', 'filming', 'editing'].includes(c.status)).length;
+      const published = contents.filter(c => c.status === 'published').length;
+      return { ideas, inProgress, published };
+  }, [contents]);
+
   if (!user) return null;
   // ... rank logic ...
 
   // Rank Logic
   const level = user.level || 1;
   const xp = user.xp || 0;
+  
   const nextLevelXp = level * 1000;
   const currentLevelBaseXp = (level - 1) * 1000;
   const progressPercent = Math.min(100, Math.max(0, ((xp - currentLevelBaseXp) / 1000) * 100));
@@ -265,7 +273,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* FINANCE CARD */}
-        <Card className="md:col-span-2 bg-gradient-to-br from-yellow-500/5 to-transparent border-zinc-200 dark:border-zinc-800 shadow-lg relative overflow-hidden hover:border-yellow-500/20 transition-colors">
+        <Card className="md:col-span-2 bg-gradient-to-br from-yellow-500/5 to-transparent border-zinc-200 dark:border-zinc-800 shadow-lg relative overflow-hidden hover:border-yellow-500/20 transition-colors cursor-pointer" onClick={() => router.push('/dashboard/finance')}>
              <div className="absolute right-4 top-4 opacity-10"><Wallet className="w-24 h-24" /></div>
             <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Financial Status</CardTitle>
@@ -277,6 +285,65 @@ export default function DashboardPage() {
                     <span className="text-red-500">-{formatCurrencyValue(summary.totalExpense, currency)}</span>
                 </div>
             </CardContent>
+        </Card>
+
+        {/* FITNESS CARD */}
+        <Card className="md:col-span-2 border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 cursor-pointer hover:border-blue-500/20 transition-colors group" onClick={() => router.push('/dashboard/fitness')}>
+             <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <Dumbbell className="w-5 h-5 text-blue-500" /> Fitness Intelligence
+                </CardTitle>
+                <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+             </CardHeader>
+             <CardContent>
+                 <div className="grid grid-cols-2 gap-4">
+                     <div className="p-3 bg-white dark:bg-zinc-950 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                         <div className="text-xs text-muted-foreground uppercase font-bold mb-1">Last Session</div>
+                         {workouts.length > 0 ? (
+                             <>
+                                <div className="font-bold truncate">{workouts[0].name}</div>
+                                <div className="text-xs text-muted-foreground">{format(parseISO(workouts[0].date), 'MMM dd')} • {workouts[0].duration} min</div>
+                             </>
+                         ) : (
+                             <div className="text-sm text-muted-foreground italic">No data</div>
+                         )}
+                     </div>
+                     <div className="p-3 bg-white dark:bg-zinc-950 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                          <div className="text-xs text-muted-foreground uppercase font-bold mb-1">Body Metrics</div>
+                          <div className="flex items-end gap-2">
+                              <span className="text-xl font-black">57</span>
+                              <span className="text-xs text-muted-foreground mb-1">kg</span>
+                          </div>
+                          <div className="text-xs text-green-500 font-bold">Optimal Range</div>
+                     </div>
+                 </div>
+             </CardContent>
+        </Card>
+
+        {/* CONTENT CARD */}
+        <Card className="md:col-span-2 border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 cursor-pointer hover:border-purple-500/20 transition-colors group" onClick={() => router.push('/dashboard/content')}>
+             <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base font-bold flex items-center gap-2">
+                    <Video className="w-5 h-5 text-purple-500" /> Content Factory
+                </CardTitle>
+                <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+             </CardHeader>
+             <CardContent>
+                  <div className="flex gap-4">
+                      <div className="flex-1 p-3 bg-purple-500/10 rounded-lg text-center">
+                          <div className="text-2xl font-black text-purple-600 dark:text-purple-400">{contentStats.ideas}</div>
+                          <div className="text-[10px] font-bold uppercase text-purple-500/70">Ideas</div>
+                      </div>
+                      <div className="flex-1 p-3 bg-blue-500/10 rounded-lg text-center">
+                          <div className="text-2xl font-black text-blue-600 dark:text-blue-400">{contentStats.inProgress}</div>
+                          <div className="text-[10px] font-bold uppercase text-blue-500/70">In Progress</div>
+                      </div>
+                      <div className="flex-1 p-3 bg-green-500/10 rounded-lg text-center">
+                          <div className="text-2xl font-black text-green-600 dark:text-green-400">{contentStats.published}</div>
+                          <div className="text-[10px] font-bold uppercase text-green-500/70">Live</div>
+                      </div>
+                  </div>
+             </CardContent>
         </Card>
 
         {/* WIDGETS ROW - SYSTEM MODULES */}

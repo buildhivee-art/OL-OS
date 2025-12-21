@@ -40,10 +40,12 @@ app.use('/api/v1/content', contentRoutes);
 import workoutRoutes from './routes/workoutRoutes';
 import noteRoutes from './routes/noteRoutes';
 import roadmapRoutes from './routes/roadmapRoutes';
+import routineRoutes from './routes/routineRoutes';
 
 app.use('/api/v1/workouts', workoutRoutes);
 app.use('/api/v1/notes', noteRoutes);
 app.use('/api/v1/roadmap', roadmapRoutes);
+app.use('/api/v1/routines', routineRoutes);
 
 app.get('/', (req: express.Request, res: express.Response) => {
   res.send('Life Tracking System API is running');

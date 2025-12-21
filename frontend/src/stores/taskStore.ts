@@ -37,10 +37,31 @@ interface TaskState {
   toggleLog: (taskId: string, date: string) => Promise<void>;
   
   // Metrics
-  metrics: Record<string, { weight: number; hp: number }>; // Key: date "YYYY-MM-DD"
+  metrics: Record<string, DailyMetricsData>; // Key: date "YYYY-MM-DD"
   fetchMetrics: (startDate: string, endDate: string) => Promise<void>;
-  updateMetric: (date: string, data: { weight?: number; hp?: number }) => Promise<void>;
+  updateMetric: (date: string, data: Partial<DailyMetricsData>) => Promise<void>;
   seedMetrics: () => Promise<void>;
+}
+
+export interface BodyMetrics {
+  neck?: number;
+  shoulders?: number;
+  chest?: number;
+  waist?: number;
+  hips?: number;
+  biceps?: number;
+  forearms?: number;
+  thighs?: number;
+  calves?: number;
+}
+
+export interface DailyMetricsData {
+  weight: number;
+  hp: number;
+  calories?: number;
+  water?: number;
+  macros?: { protein: number; carbs: number; fats: number };
+  body?: BodyMetrics;
 }
 
 export const useTaskStore = create<TaskState>((set, get) => ({
@@ -211,9 +232,16 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       
       const response = await axios.get(`${METRICS_URL}?startDate=${startDate}&endDate=${endDate}`, config);
       
-      const metricsMap: Record<string, { weight: number; hp: number }> = {};
+      const metricsMap: Record<string, DailyMetricsData> = {};
       response.data.forEach((m: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-          metricsMap[m.date] = { weight: m.weight, hp: m.hp };
+          metricsMap[m.date] = { 
+              weight: m.weight, 
+              hp: m.hp,
+              calories: m.calories,
+              water: m.water,
+              macros: m.macros,
+              body: m.body
+          };
       });
 
       set({ metrics: metricsMap });

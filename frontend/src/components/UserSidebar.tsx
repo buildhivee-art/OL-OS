@@ -58,10 +58,10 @@ export function UserSidebar({ isCollapsed, toggleCollapse }: UserSidebarProps) {
       active: pathname === '/dashboard/habits' || pathname.startsWith('/dashboard/habits'),
     },
     {
-      label: 'Workout',
+      label: 'Fitness',
       icon: Dumbbell,
-      href: '/dashboard/workout',
-      active: pathname === '/dashboard/workout' || pathname.startsWith('/dashboard/workout'),
+      href: '/dashboard/fitness',
+      active: pathname === '/dashboard/fitness' || pathname.startsWith('/dashboard/fitness'),
     },
     {
       label: 'Deep Focus',

@@ -1,5 +1,9 @@
 import express from 'express';
-import { getTransactions, addTransaction, deleteTransaction, getFinanceSummary } from '../controllers/financeController';
+import { 
+    getTransactions, addTransaction, deleteTransaction, getFinanceSummary,
+    getGoals, addGoal, updateGoal, deleteGoal,
+    getBudgets, addBudget, deleteBudget
+} from '../controllers/financeController';
 import { getDebts, addDebt, toggleDebtStatus, deleteDebt } from '../controllers/debtController';
 import { protect } from '../middleware/authMiddleware';
 
@@ -10,6 +14,23 @@ router.route('/')
     .post(protect, addTransaction);
 
 router.route('/summary').get(protect, getFinanceSummary);
+
+// Goals
+router.route('/goals')
+    .get(protect, getGoals)
+    .post(protect, addGoal);
+    
+router.route('/goals/:id')
+    .put(protect, updateGoal)
+    .delete(protect, deleteGoal);
+
+// Budgets
+router.route('/budgets')
+    .get(protect, getBudgets)
+    .post(protect, addBudget);
+
+router.route('/budgets/:id')
+    .delete(protect, deleteBudget);
 
 router.route('/debts')
     .get(protect, getDebts)

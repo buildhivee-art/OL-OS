@@ -2,9 +2,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Activity, X, Zap, CheckCircle2, Circle, ArrowRight, Wind, Sun, Moon, RefreshCw, Check } from 'lucide-react';
+import { Activity, X, Zap, CheckCircle2, Circle, ArrowRight, Wind, Sun, Moon, RefreshCw, Check, Utensils, Dumbbell, Youtube } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTaskStore } from '@/stores/taskStore';
+import { useWorkoutStore } from '@/stores/workoutStore';
+import { useContentStore } from '@/stores/contentStore';
+import { Progress } from '@/components/ui/progress';
 
 const MICRO_DIRECTIVES = [
     { text: "Hydrate: 500ml Water", icon: "💧" },
@@ -31,7 +34,9 @@ export function RightSidebar({
   const sidebarRef = useRef<HTMLDivElement>(null);
   
   // Stores
-  const { tasks, logs, toggleLog } = useTaskStore();
+  const { tasks, logs, toggleLog, metrics, fetchMetrics } = useTaskStore();
+  const { routines, fetchRoutines } = useWorkoutStore();
+  const { contents, fetchContents } = useContentStore();
   
   // Local State
   const [atmosphere, setAtmosphere] = useState<'focus' | 'energy' | 'zen'>('focus');
@@ -68,6 +73,14 @@ export function RightSidebar({
     };
   }, [isResizing, onWidthChange]);
 
+  useEffect(() => {
+      if (isOpen) {
+          fetchMetrics(format(new Date(), 'yyyy-MM-dd'), format(new Date(), 'yyyy-MM-dd'));
+          fetchRoutines();
+          fetchContents();
+      }
+  }, [isOpen, fetchMetrics, fetchRoutines, fetchContents]);
+
   // DATA SELECTORS
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const activeTasks = tasks.filter(t => t.active);
@@ -75,6 +88,18 @@ export function RightSidebar({
   const queueTasks = activeTasks
       .filter(t => !logs[`${t._id}-${todayStr}`]) // Only incomplete
       .slice(0, 5); // Take top 5
+
+  // Nutrition Data
+  const todaysMetrics = metrics[todayStr] || {};
+  const calories = todaysMetrics.calories || 0;
+  const protein = todaysMetrics.macros?.protein || 0;
+  const targetCalories = 2500; // Mock target
+  
+  // Content Data
+  const pendingContent = contents.filter(c => c.status === 'idea' || c.status === 'scripting').slice(0, 3);
+  
+  // Workout Data
+  const activeRoutine = routines.find(r => r.days.includes(format(new Date(), 'EEE')));
 
   // Synchronicity Logic
   const generateDirective = () => {
@@ -93,7 +118,7 @@ export function RightSidebar({
   return (
     <div 
         ref={sidebarRef}
-        className="fixed inset-y-0 right-0 z-40 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-xl border-l border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col"
+        className="fixed inset-y-0 right-0 z-50 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-xl border-l border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col"
         style={{ width: `${width}px` }}
     >
       {/* Drag Handle */}
@@ -163,6 +188,58 @@ export function RightSidebar({
           </div>
 
           <div className="h-[1px] bg-zinc-200 dark:bg-zinc-800" />
+            
+          {/* NUTRITION WIDGET */}
+          <div className="space-y-3">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                   <Utensils className="w-3 h-3" />
+                   <span>Fuel Levels</span>
+              </div>
+              <div className="p-4 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 space-y-3">
+                   <div className="flex justify-between items-end">
+                        <div>
+                            <div className="text-2xl font-black">{calories}</div>
+                            <div className="text-[10px] text-muted-foreground uppercase font-bold">kcal consumed</div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-sm font-bold text-muted-foreground">/ {targetCalories}</div>
+                        </div>
+                   </div>
+                   <Progress value={Math.min(100, (calories / targetCalories) * 100)} className="h-2" />
+                   <div className="flex justify-between text-xs pt-1">
+                       <span className="text-muted-foreground">{protein}g Protein</span>
+                       <span className="text-muted-foreground">{todaysMetrics.macros?.carbs || 0}g Carbs</span>
+                       <span className="text-muted-foreground">{todaysMetrics.macros?.fats || 0}g Fat</span>
+                   </div>
+              </div>
+          </div>
+          
+           {/* TRAINING WIDGET */}
+           <div className="space-y-3">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                   <Dumbbell className="w-3 h-3" />
+                   <span>Training Protocol</span>
+              </div>
+              <div className="p-4 bg-gradient-to-br from-zinc-900 to-black text-white rounded-lg border border-zinc-800">
+                   {activeRoutine ? (
+                        <>
+                            <div className="flex justify-between items-start mb-2">
+                                <h4 className="font-bold text-lg">{activeRoutine.name}</h4>
+                                <span className="bg-white/20 text-[10px] px-2 py-0.5 rounded font-bold uppercase">Today</span>
+                            </div>
+                            <p className="text-xs text-zinc-400 mb-3">{activeRoutine.exercises.length} Exercises Scheduled</p>
+                            <Button size="sm" className="w-full bg-white text-black hover:bg-zinc-200 uppercase font-bold text-xs">Execute Workout</Button>
+                        </>
+                   ) : (
+                       <div className="text-center py-2 text-zinc-400">
+                           <p className="text-sm font-medium">Rest Day Designated</p>
+                           <p className="text-xs opacity-50 mt-1">Recovery is growth.</p>
+                       </div>
+                   )}
+              </div>
+          </div>
+
+          <div className="h-[1px] bg-zinc-200 dark:bg-zinc-800" />
 
           {/* 2. TACTICAL QUEUE */}
           <div className="space-y-3">
@@ -203,6 +280,25 @@ export function RightSidebar({
                           </div>
                       ))
                   )}
+              </div>
+          </div>
+          
+           {/* CONTENT PIPELINE */}
+           <div className="space-y-3">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                   <Youtube className="w-3 h-3" />
+                   <span>Content Pipeline</span>
+              </div>
+              <div className="space-y-2">
+                  {pendingContent.map(c => (
+                      <div key={c._id} className="text-xs p-2 bg-zinc-100 dark:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+                          <span className="truncate max-w-[150px] font-medium">{c.title}</span>
+                          <span className={cn("px-1.5 py-0.5 rounded text-[10px] uppercase font-bold", 
+                              c.status === 'idea' ? "bg-blue-500/10 text-blue-500" : "bg-purple-500/10 text-purple-500"
+                          )}>{c.status}</span>
+                      </div>
+                  ))}
+                  {pendingContent.length === 0 && <p className="text-xs text-muted-foreground italic pl-2">No pending content.</p>}
               </div>
           </div>
 

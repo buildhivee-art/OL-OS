@@ -26,7 +26,7 @@ export const getMetrics = async (req: any, res: Response) => {
 // @access  Private
 export const updateMetric = async (req: any, res: Response) => {
   try {
-    const { date, weight, hp } = req.body;
+    const { date, weight, hp, calories, water, macros } = req.body;
 
     if (!date) {
         res.status(400).json({ message: 'Date is required' });
@@ -38,7 +38,10 @@ export const updateMetric = async (req: any, res: Response) => {
         { 
             $set: { 
                 ...(weight !== undefined && { weight }), 
-                ...(hp !== undefined && { hp }) 
+                ...(hp !== undefined && { hp }),
+                ...(calories !== undefined && { calories }),
+                ...(water !== undefined && { water }),
+                ...(macros !== undefined && { macros }),
             } 
         },
         { new: true, upsert: true }

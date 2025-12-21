@@ -30,8 +30,19 @@ export interface Workout {
   updatedAt: string;
 }
 
+export interface Routine {
+    _id: string;
+    user: string;
+    name: string;
+    days: string[]; // ['Mon', 'Fri']
+    exercises: Exercise[];
+    notes?: string;
+    isActive: boolean;
+}
+
 interface WorkoutState {
   workouts: Workout[];
+  routines: Routine[];
   isLoading: boolean;
   error: string | null;
   
@@ -39,10 +50,17 @@ interface WorkoutState {
   createWorkout: (workout: Partial<Workout>) => Promise<void>;
   updateWorkout: (id: string, workout: Partial<Workout>) => Promise<void>;
   deleteWorkout: (id: string) => Promise<void>;
+
+  fetchRoutines: () => Promise<void>;
+  createRoutine: (routine: Partial<Routine>) => Promise<void>;
+  updateRoutine: (id: string, routine: Partial<Routine>) => Promise<void>;
+  deleteRoutine: (id: string) => Promise<void>;
+  seedRoutines: () => Promise<void>;
 }
 
 export const useWorkoutStore = create<WorkoutState>((set) => ({
   workouts: [],
+  routines: [],
   isLoading: false,
   error: null,
 
@@ -50,15 +68,10 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const token = useAuthStore.getState().token;
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
+      const config = { headers: { Authorization: `Bearer ${token}` } };
       const response = await axios.get(`${API_URL}/workouts`, config);
       set({ workouts: response.data, isLoading: false });
-    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       set({ 
         error: error.response?.data?.message || 'Failed to fetch workouts',
         isLoading: false 
@@ -70,18 +83,13 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const token = useAuthStore.getState().token;
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
+      const config = { headers: { Authorization: `Bearer ${token}` } };
       const response = await axios.post(`${API_URL}/workouts`, workoutData, config);
       set(state => ({ 
         workouts: [response.data, ...state.workouts],
         isLoading: false 
       }));
-    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       set({ 
         error: error.response?.data?.message || 'Failed to create workout',
         isLoading: false 
@@ -91,22 +99,16 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
   },
 
   updateWorkout: async (id: string, workoutData: Partial<Workout>) => {
-    // Implementation for update
     set({ isLoading: true, error: null });
     try {
         const token = useAuthStore.getState().token;
-        const config = {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        };
-  
+        const config = { headers: { Authorization: `Bearer ${token}` } };
         const response = await axios.put(`${API_URL}/workouts/${id}`, workoutData, config);
         set(state => ({ 
           workouts: state.workouts.map(w => w._id === id ? response.data : w),
           isLoading: false 
         }));
-      } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      } catch (error: any) {
         set({ 
           error: error.response?.data?.message || 'Failed to update workout',
           isLoading: false 
@@ -119,22 +121,105 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const token = useAuthStore.getState().token;
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
+      const config = { headers: { Authorization: `Bearer ${token}` } };
       await axios.delete(`${API_URL}/workouts/${id}`, config);
       set(state => ({ 
         workouts: state.workouts.filter(w => w._id !== id),
         isLoading: false 
       }));
-    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
       set({ 
         error: error.response?.data?.message || 'Failed to delete workout',
         isLoading: false 
       });
     }
   },
+
+  fetchRoutines: async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const token = useAuthStore.getState().token;
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        const response = await axios.get(`${API_URL}/routines`, config);
+        set({ routines: response.data, isLoading: false });
+      } catch (error: any) {
+        set({ 
+          error: error.response?.data?.message || 'Failed to fetch routines',
+          isLoading: false 
+        });
+      }
+  },
+
+  createRoutine: async (routineData: Partial<Routine>) => {
+      set({ isLoading: true, error: null });
+      try {
+        const token = useAuthStore.getState().token;
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        const response = await axios.post(`${API_URL}/routines`, routineData, config);
+        set(state => ({ 
+          routines: [...state.routines, response.data],
+          isLoading: false 
+        }));
+      } catch (error: any) {
+        set({ 
+          error: error.response?.data?.message || 'Failed to create routine',
+          isLoading: false 
+        });
+        throw error;
+      }
+  },
+
+  updateRoutine: async (id: string, routineData: Partial<Routine>) => {
+      set({ isLoading: true, error: null });
+      try {
+        const token = useAuthStore.getState().token;
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        const response = await axios.put(`${API_URL}/routines/${id}`, routineData, config);
+        set(state => ({ 
+          routines: state.routines.map(r => r._id === id ? response.data : r),
+          isLoading: false 
+        }));
+      } catch (error: any) {
+        set({ 
+          error: error.response?.data?.message || 'Failed to update routine',
+          isLoading: false 
+        });
+        throw error;
+      }
+  },
+
+  deleteRoutine: async (id: string) => {
+      set({ isLoading: true, error: null });
+      try {
+        const token = useAuthStore.getState().token;
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        await axios.delete(`${API_URL}/routines/${id}`, config);
+        set(state => ({ 
+          routines: state.routines.filter(r => r._id !== id),
+          isLoading: false 
+        }));
+      } catch (error: any) {
+        set({ 
+          error: error.response?.data?.message || 'Failed to delete routine',
+          isLoading: false 
+        });
+      }
+  },
+
+  seedRoutines: async () => {
+      set({ isLoading: true, error: null });
+      try {
+        const token = useAuthStore.getState().token;
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+        await axios.post(`${API_URL}/routines/seed`, {}, config);
+        // Refresh routines
+        const response = await axios.get(`${API_URL}/routines`, config);
+        set({ routines: response.data, isLoading: false });
+      } catch (error: any) {
+        set({ 
+          error: error.response?.data?.message || 'Failed to seed routines',
+          isLoading: false 
+        });
+      }
+  }
 }));
