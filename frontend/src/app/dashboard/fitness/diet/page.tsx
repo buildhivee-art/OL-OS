@@ -2,25 +2,33 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { FitnessNav } from '@/components/FitnessNav';
-import { useTaskStore } from '@/stores/taskStore';
-import { format, subDays, addDays, parseISO, isSameDay } from 'date-fns';
+import { useTaskStore, Meal } from '@/stores/taskStore';
+import { format, subDays, addDays, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ChevronLeft, ChevronRight, Droplets, Flame, Beef, Wheat, Cookie, Save, Plus, RotateCcw, Utensils } from 'lucide-react';
+import { 
+    ChevronLeft, ChevronRight, Droplets, Flame, Plus, 
+    Sunrise, Sun, Moon, Coffee, Trash2, Utensils, History,
+    Dumbbell, ArrowRight, TrendingUp, Copy, Scale
+} from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 
 export default function NutritionPage() {
   const { metrics, fetchMetrics, updateMetric } = useTaskStore();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [activeDialog, setActiveDialog] = useState<'food' | 'water' | null>(null);
+  const [activeDialog, setActiveDialog] = useState<string | null>(null);
 
-  // Buffer for editing forms
+  // Feature Toggle: Training Day
+  const [isTrainingDay, setIsTrainingDay] = useState(false); // Can be persisted in generic metric field later
+
+  // Form State
   const [addValues, setAddValues] = useState({
+    name: '',
     calories: '',
     protein: '',
     carbs: '',
@@ -28,23 +36,26 @@ export default function NutritionPage() {
     water: ''
   });
 
-  // Calculate targets (hardcoded for now, could be in user settings later)
-  const TARGETS = {
-    calories: 2500,
+  // Dynamic Targets based on Mode
+  const TARGETS = useMemo(() => isTrainingDay ? {
+    calories: 2800,
+    protein: 200,
+    carbs: 350,
+    fats: 65,
+    water: 4000
+  } : {
+    calories: 2300,
     protein: 180,
-    carbs: 250,
-    fats: 70,
-    water: 3000 // ml
-  };
+    carbs: 200,
+    fats: 80,
+    water: 3000
+  }, [isTrainingDay]);
 
   useEffect(() => {
-    // Fetch ample range around selected date
-    const start = subDays(selectedDate, 7);
-    const end = addDays(selectedDate, 7);
-    fetchMetrics(format(start, 'yyyy-MM-dd'), format(end, 'yyyy-MM-dd'));
-  }, [selectedDate, fetchMetrics]); // Re-fetch when moving far might be better logic, but this is safe for now
+    fetchMetrics(format(subDays(selectedDate, 14), 'yyyy-MM-dd'), format(addDays(selectedDate, 7), 'yyyy-MM-dd'));
+  }, [selectedDate, fetchMetrics]);
 
-  // Get current day's data
+
   const dateKey = format(selectedDate, 'yyyy-MM-dd');
   const currentMetric = metrics[dateKey] || {};
   
@@ -54,416 +65,464 @@ export default function NutritionPage() {
     carbs: currentMetric.macros?.carbs || 0,
     fats: currentMetric.macros?.fats || 0,
     water: currentMetric.water || 0,
-    weight: currentMetric.weight || 0
+    weight: currentMetric.weight || 0,
+    meals: currentMetric.meals || { breakfast: [], lunch: [], dinner: [], snacks: [] }
   }), [currentMetric]);
 
-  // Reset values when opening dialog
-  useEffect(() => {
-    if (activeDialog) {
-      setAddValues({
-        calories: '',
-        protein: '',
-        carbs: '',
-        fats: '',
-        water: ''
-      });
-    }
-  }, [activeDialog]);
+  // History Helper: Last 3 unique meals of this type
+  const getRecentMeals = (type: string) => {
+      const history: Meal[] = [];
+      const seen = new Set();
+      
+      // Look back 7 days
+      for (let i = 1; i <= 7; i++) {
+          const d = subDays(new Date(), i);
+          const k = format(d, 'yyyy-MM-dd');
+          const dayData = metrics[k];
+          if (dayData && dayData.meals && (dayData.meals as any)[type]) {
+              (dayData.meals as any)[type].forEach((m: Meal) => {
+                  if (!seen.has(m.name)) {
+                      seen.add(m.name);
+                      history.push(m);
+                  }
+              });
+          }
+          if (history.length >= 3) break;
+      }
+      return history;
+  };
 
-  const handleSave = async () => {
-    try {
-      if (activeDialog === 'food') {
-          await updateMetric(dateKey, {
-            calories: (currentData.calories || 0) + Number(addValues.calories || 0),
-            macros: {
-              protein: (currentData.protein || 0) + Number(addValues.protein || 0),
-              carbs: (currentData.carbs || 0) + Number(addValues.carbs || 0),
-              fats: (currentData.fats || 0) + Number(addValues.fats || 0)
-            }
-          });
-          toast.success('Food logged successfully');
-      } else if (activeDialog === 'water') {
-          await updateMetric(dateKey, {
-            water: (currentData.water || 0) + Number(addValues.water || 0)
-          });
-          toast.success('Water logged successfully');
+  const handleSmartAdd = (meal: Meal) => {
+      setAddValues({
+          name: meal.name,
+          calories: String(meal.calories),
+          protein: String(meal.macros?.protein || 0),
+          carbs: String(meal.macros?.carbs || 0),
+          fats: String(meal.macros?.fats || 0),
+          water: ''
+      });
+      toast.success("Autofilled from History");
+  };
+
+  const copyYesterday = async (type: string) => {
+      const yesterdayKey = format(subDays(selectedDate, 1), 'yyyy-MM-dd');
+      const yesterdayData = metrics[yesterdayKey];
+      if (!yesterdayData || !yesterdayData.meals || !(yesterdayData.meals as any)[type].length) {
+          toast.error("No meals found yesterday for " + type);
+          return;
       }
 
+      const mealsToCopy = (yesterdayData.meals as any)[type] as Meal[];
+      const newMeals = mealsToCopy.map(m => ({ ...m, id: Date.now().toString() + Math.random() }));
+
+      const existingMeals = (currentData.meals as any)[type] || [];
+      const updatedMealsMap = {
+          ...currentData.meals,
+          [type]: [...existingMeals, ...newMeals]
+      };
+
+      await recalculateAndSave(updatedMealsMap);
+      toast.success(`Copied ${newMeals.length} meals from yesterday`);
+  };
+
+    const recalculateAndSave = async (mealsMap: any) => {
+        let totalCal = 0, totalP = 0, totalC = 0, totalF = 0;
+        Object.values(mealsMap).flat().forEach((m: any) => {
+            totalCal += m.calories;
+            totalP += m.macros.protein;
+            totalC += m.macros.carbs;
+            totalF += m.macros.fats;
+        });
+
+        await updateMetric(dateKey, {
+            calories: totalCal,
+            macros: { protein: totalP, carbs: totalC, fats: totalF },
+            meals: mealsMap
+        });
+    };
+
+  const handleSaveMeal = async () => {
+      if (!activeDialog) return;
+
+      if (activeDialog === 'water') {
+          await updateMetric(dateKey, { water: (currentData.water || 0) + Number(addValues.water || 0) });
+          toast.success("Hydration Logged");
+          setActiveDialog(null);
+          return;
+      }
+
+      const mealType = activeDialog as string;
+      const newMeal: Meal = {
+          id: Date.now().toString(),
+          name: addValues.name || 'Quick Add',
+          calories: Number(addValues.calories || 0),
+          macros: {
+              protein: Number(addValues.protein || 0),
+              carbs: Number(addValues.carbs || 0),
+              fats: Number(addValues.fats || 0)
+          }
+      };
+
+      const existingMeals = (currentData.meals as any)[mealType] || [];
+      const updatedMeals = {
+          ...currentData.meals,
+          [mealType]: [...existingMeals, newMeal]
+      };
+
+      await recalculateAndSave(updatedMeals);
+
+      toast.success("Meal Added");
       setActiveDialog(null);
-    } catch (error) {
-      toast.error('Failed to update log');
-    }
+      setAddValues({ name: '', calories: '', protein: '', carbs: '', fats: '', water: '' });
+  };
+
+  const deleteMeal = async (type: string, id: string) => {
+      const list = (currentData.meals as any)[type] as Meal[];
+      const updatedList = list.filter(m => m.id !== id);
+      const updatedMeals = { ...currentData.meals, [type]: updatedList };
+      await recalculateAndSave(updatedMeals);
+      toast.success("Meal Removed");
   };
 
   const quickAddWater = async (amount: number) => {
-    const newWater = (currentData.water || 0) + amount;
-    await updateMetric(dateKey, { water: newWater });
-    toast.success(`Added ${amount}ml water`);
+      await updateMetric(dateKey, { water: (currentData.water || 0) + amount });
+      toast.success(`+${amount}ml Water`);
   };
 
-  // Helper for macro percentage of calories
-  // 1g Protein = 4cal, 1g Carb = 4cal, 1g Fat = 9cal
-  const totalMacroCals = (currentData.protein * 4) + (currentData.carbs * 4) + (currentData.fats * 9);
+  // --- ANALYTICS CALCULATIONS ---
+  const getWeeklyBalance = () => {
+      let balance = 0;
+      const start = startOfWeek(selectedDate);
+      const days = eachDayOfInterval({ start, end: selectedDate }); // only up to today
+      
+      days.forEach(d => {
+          const k = format(d, 'yyyy-MM-dd');
+          const m = metrics[k];
+          const consumed = m?.calories || 0;
+          // Approximating target for past days
+          // Ideally we save 'target' in DB or assume standard. Using standard Training/Rest split is hard without data.
+          // We'll use base 2500 for simplicity or Training Target if high.
+          balance += (consumed - 2500); 
+      });
+      return balance;
+  };
+
+  const getWeightTrend = () => {
+      let sum = 0;
+      let count = 0;
+      for (let i = 0; i < 7; i++) {
+          const d = subDays(selectedDate, i);
+          const k = format(d, 'yyyy-MM-dd');
+          const w = metrics[k]?.weight;
+          if (w) { sum += w; count++; }
+      }
+      return count > 0 ? (sum / count).toFixed(1) : '---';
+  };
+
   const getPercent = (val: number, target: number) => Math.min(100, Math.round((val / target) * 100));
+  const MEAL_SECTIONS = [
+      { id: 'breakfast', label: 'Breakfast', icon: Sunrise, color: 'text-orange-400' },
+      { id: 'lunch', label: 'Lunch', icon: Sun, color: 'text-yellow-500' },
+      { id: 'dinner', label: 'Dinner', icon: Moon, color: 'text-indigo-400' },
+      { id: 'snacks', label: 'Snacks', icon: Coffee, color: 'text-pink-400' },
+  ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-12">
+    <div className="space-y-8 pb-12 animate-in fade-in duration-500">
       <FitnessNav />
 
+      {/* DIALOG */}
       <Dialog open={!!activeDialog} onOpenChange={(open) => !open && setActiveDialog(null)}>
-        <DialogContent className="sm:max-w-[425px] border-zinc-800 bg-zinc-950/95 backdrop-blur-xl">
-             {activeDialog === 'food' && (
-                 <>
+        <DialogContent className="sm:max-w-[500px] border-zinc-800 bg-zinc-950/95 backdrop-blur-xl p-6">
+            {activeDialog === 'water' ? (
+                // Water Dialog
+                <>
                     <DialogHeader>
-                        <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-                            <Utensils className="w-5 h-5 text-muted-foreground" /> Add Food
+                        <DialogTitle className="flex items-center gap-2 text-cyan-500">
+                             <Droplets className="w-5 h-5 fill-cyan-500" /> Log Water
                         </DialogTitle>
-                        <DialogDescription>Add to your daily totals for <span className="text-foreground font-bold">{format(selectedDate, 'MMM dd')}</span></DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-6 py-6">
-                        <div className="space-y-4">
-                            <Label className="text-xs font-bold uppercase text-muted-foreground">Energy</Label>
-                            <div className="space-y-2">
-                                <Label className="flex items-center gap-2 text-xs">
-                                    <Flame className="w-3 h-3 text-orange-500" /> Calories
-                                </Label>
-                                <div className="relative">
-                                    <Input 
-                                        type="number" 
-                                        className="pl-8 font-mono font-bold bg-zinc-900/50 border-orange-500/20 focus-visible:ring-orange-500"
-                                        placeholder="0"
-                                        value={addValues.calories} 
-                                        onChange={(e) => setAddValues({...addValues, calories: e.target.value})}
-                                        autoFocus
-                                    />
-                                    <span className="absolute left-3 top-2.5 text-xs text-muted-foreground">k</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div className="space-y-4">
-                            <Label className="text-xs font-bold uppercase text-muted-foreground">Macros (Optional)</Label>
-                            <div className="grid grid-cols-3 gap-3">
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] text-red-400 font-bold uppercase flex items-center gap-1">Protein</Label>
-                                    <div className="relative">
-                                        <Input 
-                                            type="number" 
-                                            className="pr-6 font-mono text-sm bg-red-500/5 border-red-500/20 focus-visible:ring-red-500" 
-                                            placeholder="0"
-                                            value={addValues.protein} 
-                                            onChange={(e) => setAddValues({...addValues, protein: e.target.value})}
-                                        />
-                                        <span className="absolute right-2 top-2.5 text-[10px] text-muted-foreground font-bold">g</span>
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] text-blue-400 font-bold uppercase flex items-center gap-1">Carbs</Label>
-                                    <div className="relative">
-                                        <Input 
-                                            type="number" 
-                                            className="pr-6 font-mono text-sm bg-blue-500/5 border-blue-500/20 focus-visible:ring-blue-500" 
-                                            placeholder="0"
-                                            value={addValues.carbs} 
-                                            onChange={(e) => setAddValues({...addValues, carbs: e.target.value})}
-                                        />
-                                        <span className="absolute right-2 top-2.5 text-[10px] text-muted-foreground font-bold">g</span>
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] text-yellow-400 font-bold uppercase flex items-center gap-1">Fats</Label>
-                                    <div className="relative">
-                                        <Input 
-                                            type="number" 
-                                            className="pr-6 font-mono text-sm bg-yellow-500/5 border-yellow-500/20 focus-visible:ring-yellow-500" 
-                                            placeholder="0"
-                                            value={addValues.fats} 
-                                            onChange={(e) => setAddValues({...addValues, fats: e.target.value})}
-                                        />
-                                        <span className="absolute right-2 top-2.5 text-[10px] text-muted-foreground font-bold">g</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="py-4 space-y-4">
+                         <div className="space-y-2">
+                             <Label>Amount (ml)</Label>
+                             <Input 
+                                 type="number" autoFocus placeholder="e.g. 500" 
+                                 className="text-2xl font-black h-14 bg-zinc-900 border-zinc-800"
+                                 value={addValues.water}
+                                 onChange={e => setAddValues({...addValues, water: e.target.value})}
+                             />
+                         </div>
+                         <Button onClick={handleSaveMeal} className="w-full h-12 text-lg font-bold bg-cyan-600 hover:bg-cyan-500 text-white">Log Hydration</Button>
                     </div>
-                 </>
-             )}
+                </>
+            ) : (
+                // Meal Dialog
+                <>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 capitalize">
+                             <Utensils className="w-5 h-5" /> Add to {activeDialog}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="py-2 space-y-6">
+                         
+                         {/* Smart History Chips */}
+                         <div className="flex flex-wrap gap-2">
+                             {activeDialog && getRecentMeals(activeDialog).map((m, idx) => (
+                                 <button 
+                                    key={idx} 
+                                    onClick={() => handleSmartAdd(m)}
+                                    className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-bold hover:bg-zinc-800 hover:border-emerald-500/50 hover:text-emerald-500 transition-all flex items-center gap-1"
+                                 >
+                                     <History className="w-3 h-3" /> {m.name}
+                                 </button>
+                             ))}
+                         </div>
 
-             {activeDialog === 'water' && (
-                 <>
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-                            <Droplets className="w-5 h-5 text-cyan-500" /> Add Water
-                        </DialogTitle>
-                         <DialogDescription>Add a custom amount to your hydration log.</DialogDescription>
-                    </DialogHeader>
-                    <div className="py-6">
-                        <div className="space-y-2">
-                            <Label className="flex items-center gap-2 text-xs">
-                                Amount (ml)
-                            </Label>
-                            <Input 
-                                type="number" 
-                                className="font-mono font-bold bg-zinc-900/50 border-cyan-500/20 focus-visible:ring-cyan-500 text-lg h-12"
-                                placeholder="e.g. 330"
-                                value={addValues.water} 
-                                onChange={(e) => setAddValues({...addValues, water: e.target.value})}
-                                autoFocus
-                            />
-                        </div>
+                         <div className="space-y-4 bg-zinc-900/30 p-4 rounded-xl border border-zinc-800/50">
+                            <div className="space-y-2">
+                                <Label className="text-xs uppercase font-bold text-muted-foreground">Meal Name</Label>
+                                <Input 
+                                    autoFocus placeholder="e.g. Oatmeal & Eggs" 
+                                    className="font-bold bg-zinc-900 border-zinc-800 focus:ring-emerald-500"
+                                    value={addValues.name}
+                                    onChange={e => setAddValues({...addValues, name: e.target.value})}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="text-xs uppercase font-bold text-orange-500">Calories</Label>
+                                    <Input 
+                                        type="number" placeholder="0" 
+                                        className="h-12 text-xl font-black bg-zinc-900 border-zinc-800"
+                                        value={addValues.calories}
+                                        onChange={e => setAddValues({...addValues, calories: e.target.value})}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs uppercase font-bold text-muted-foreground">Macros (P/C/F)</Label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <Input type="number" placeholder="P" className="bg-zinc-900 border-zinc-800 text-center" value={addValues.protein} onChange={e => setAddValues({...addValues, protein: e.target.value})} />
+                                        <Input type="number" placeholder="C" className="bg-zinc-900 border-zinc-800 text-center" value={addValues.carbs} onChange={e => setAddValues({...addValues, carbs: e.target.value})} />
+                                        <Input type="number" placeholder="F" className="bg-zinc-900 border-zinc-800 text-center" value={addValues.fats} onChange={e => setAddValues({...addValues, fats: e.target.value})} />
+                                    </div>
+                                </div>
+                            </div>
+                         </div>
+                         <Button onClick={handleSaveMeal} className="w-full h-12 text-lg font-bold text-black bg-white hover:bg-zinc-200 shadow-xl shadow-white/5">Save Meal</Button>
                     </div>
-                 </>
-             )}
-            
-            <DialogFooter>
-                <Button onClick={handleSave} className="w-full font-bold">Add to Log</Button>
-            </DialogFooter>
+                </>
+            )}
         </DialogContent>
       </Dialog>
 
-      {/* HEADER & DATE NAV */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+      {/* HEADER & CONTROLS */}
+      <div className="flex flex-col md:flex-row justify-between items-end gap-6">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter uppercase italic">Fuel Logistics</h1>
-          <p className="text-muted-foreground mt-1">Manage intake and recovery metrics.</p>
+           {/* MODE SWITCHER */}
+          <div className="flex items-center gap-3 mb-2">
+               <h1 className="text-4xl font-black tracking-tighter uppercase italic">Fuel Logistics</h1>
+               <div className="flex bg-zinc-900 p-1 rounded-full border border-zinc-800">
+                    <button 
+                       onClick={() => setIsTrainingDay(false)}
+                       className={cn("px-4 py-1 rounded-full text-xs font-bold uppercase transition-all", !isTrainingDay ? "bg-zinc-800 text-white shadow" : "text-zinc-500 hover:text-zinc-300")}
+                    >
+                        Rest
+                    </button>
+                    <button 
+                       onClick={() => setIsTrainingDay(true)}
+                       className={cn("px-4 py-1 rounded-full text-xs font-bold uppercase transition-all flex items-center gap-1", isTrainingDay ? "bg-orange-600 text-white shadow" : "text-zinc-500 hover:text-zinc-300")}
+                    >
+                        <Dumbbell className="w-3 h-3" /> Training
+                    </button>
+               </div>
+          </div>
+          <p className="text-muted-foreground font-medium pl-1">
+              Targeting <span className="text-white font-bold">{TARGETS.calories} kcal</span> for {isTrainingDay ? 'muscle growth' : 'recovery'}.
+          </p>
         </div>
         
-        <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
-           <Button variant="ghost" size="icon" onClick={() => setSelectedDate(subDays(selectedDate, 1))}>
-             <ChevronLeft className="w-4 h-4" />
-           </Button>
-           <div className="px-4 font-bold text-sm min-w-[120px] text-center">
-             {isSameDay(selectedDate, new Date()) ? 'Today' : format(selectedDate, 'MMM dd, yyyy')}
-           </div>
-           <Button variant="ghost" size="icon" onClick={() => setSelectedDate(addDays(selectedDate, 1))}>
-             <ChevronRight className="w-4 h-4" />
-           </Button>
+        <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-900 border border-zinc-800 p-1 rounded-xl">
+           <Button variant="ghost" size="icon" onClick={() => setSelectedDate(subDays(selectedDate, 1))}><ChevronLeft className="w-4 h-4" /></Button>
+           <div className="px-4 font-bold text-sm min-w-[120px] text-center">{isSameDay(selectedDate, new Date()) ? 'Today' : format(selectedDate, 'MMM dd')}</div>
+           <Button variant="ghost" size="icon" onClick={() => setSelectedDate(addDays(selectedDate, 1))}><ChevronRight className="w-4 h-4" /></Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          {/* MAIN CALORIES CARD */}
-          <Card className="col-span-1 md:col-span-2 overflow-hidden border-orange-500/10 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent shadow-xl shadow-orange-500/5 relative group">
-              <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 opacity-50" />
-              <CardHeader className="flex flex-row justify-between items-start pb-2">
-                  <div className="space-y-1">
-                    <CardTitle className="text-2xl font-black uppercase text-orange-600 dark:text-orange-400 flex items-center gap-2 tracking-wide">
-                         <Flame className="w-6 h-6 fill-orange-500 text-orange-600 animate-pulse" /> Daily Energy
-                    </CardTitle>
-                    <CardDescription className="font-medium text-xs uppercase tracking-wider text-muted-foreground/70">
-                        Total Intake vs {TARGETS.calories} kcal Target
-                    </CardDescription>
-                  </div>
-                  <Button 
-                    onClick={() => setActiveDialog('food')}
-                    className="bg-orange-600 hover:bg-orange-500 text-white font-bold shadow-lg shadow-orange-900/20 active:scale-95 transition-all"
-                  >
-                        <Plus className="w-4 h-4 mr-2" /> Add Food
-                  </Button>
-              </CardHeader>
-              <CardContent className="space-y-8 pt-6">
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-12">
-                      <div className="relative flex flex-col justify-center">
-                          {/* Typography Based Progress */}
-                          <div className="flex items-baseline gap-2">
-                              <span className="text-8xl font-black tracking-tighter text-foreground tabular-nums leading-none">
-                                  {currentData.calories}
-                              </span>
-                              <span className="text-xl font-bold text-muted-foreground/50 uppercase tracking-widest">
-                                kcal
-                              </span>
-                          </div>
-                      </div>
-                      <div className="flex-1 w-full space-y-3">
-                          <div className="flex justify-between items-end">
-                              <div className="space-y-1">
-                                  <div className="text-xs font-bold uppercase text-muted-foreground">Daily Progress</div>
-                                  <div className="text-2xl font-black">{getPercent(currentData.calories, TARGETS.calories)}%</div>
-                              </div>
-                              <div className="text-right">
-                                  <div className="text-xs font-bold uppercase text-muted-foreground">Remaining</div>
-                                  <div className="text-xl font-bold tabular-nums text-muted-foreground">
-                                      {Math.max(0, TARGETS.calories - currentData.calories)}
-                                  </div>
-                              </div>
-                          </div>
-                          <Progress 
-                            value={getPercent(currentData.calories, TARGETS.calories)} 
-                            className="h-6 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800" 
-                            indicatorClassName={cn(
-                                "bg-gradient-to-r shadow-lg",
-                                getPercent(currentData.calories, TARGETS.calories) > 100 
-                                    ? "from-red-500 to-red-600 shadow-red-500/20" 
-                                    : "from-orange-500 to-orange-400 shadow-orange-500/20"
-                            )}
-                          />
-                      </div>
-                  </div>
+      {/* TOP WIDGET ROW */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+           {/* WEEKLY BANK */}
+           <Card className="bg-zinc-900/20 border-zinc-800 flex flex-col justify-center p-4 h-24">
+               <div className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1 mb-1">
+                   Weekly Balance <ArrowRight className="w-3 h-3 -rotate-45" />
+               </div>
+               <div className={cn("text-3xl font-black tabular-nums", getWeeklyBalance() > 0 ? "text-orange-500" : "text-emerald-500")}>
+                   {getWeeklyBalance() > 0 ? '+' : ''}{getWeeklyBalance()}
+               </div>
+           </Card>
 
-                  {/* Quick Macros Summary Bar */}
-                  <div className="space-y-2">
-                      <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground tracking-widest">
-                          <span>Macro Distribution</span>
-                          <span>Ratio</span>
-                      </div>
-                      <div className="flex h-2 rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-800">
-                         {totalMacroCals > 0 && (
-                             <>
-                                <div className="bg-red-500 h-full shadow-[0_0_10px_rgba(239,68,68,0.5)]" style={{ width: `${(currentData.protein * 4 / totalMacroCals) * 100}%` }} />
-                                <div className="bg-blue-500 h-full shadow-[0_0_10px_rgba(59,130,246,0.5)]" style={{ width: `${(currentData.carbs * 4 / totalMacroCals) * 100}%` }} />
-                                <div className="bg-yellow-500 h-full shadow-[0_0_10px_rgba(234,179,8,0.5)]" style={{ width: `${(currentData.fats * 9 / totalMacroCals) * 100}%` }} />
-                             </>
-                         )}
-                      </div>
-                  </div>
-              </CardContent>
-          </Card>
+           {/* WEIGHT TREND */}
+           <Card className="bg-zinc-900/20 border-zinc-800 flex flex-col justify-center p-4 h-24">
+               <div className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-1 mb-1">
+                   7-Day Trend <TrendingUp className="w-3 h-3" />
+               </div>
+               <div className="flex items-baseline gap-1">
+                   <div className="text-3xl font-black text-white">{getWeightTrend()}</div>
+                   <span className="text-xs font-bold text-zinc-600">lbs</span>
+               </div>
+           </Card>
 
-          {/* WATER CARD */}
-          <Card className="col-span-1 border-cyan-500/20 bg-cyan-500/5 relative overflow-hidden flex flex-col justify-between group">
-               <CardHeader className="relative z-20">
-                  <CardTitle className="flex items-center gap-2 text-cyan-600 dark:text-cyan-400">
-                      <Droplets className="w-5 h-5 fill-cyan-500 text-cyan-600" /> Hydration
-                  </CardTitle>
-               </CardHeader>
-               <CardContent className="flex flex-col items-center justify-center gap-2 py-2 flex-grow relative z-20">
-                   <div className="text-center space-y-1">
-                        <div className="text-6xl font-black text-cyan-700 dark:text-cyan-100 tabular-nums tracking-tighter drop-shadow-sm">
-                            {(currentData.water / 1000).toFixed(1)}L
-                        </div>
-                        <div className="text-xs font-bold text-cyan-700/60 dark:text-cyan-300/60 uppercase tracking-widest">
-                            {currentData.water} / {TARGETS.water} ml
-                        </div>
+           {/* REMAINING */}
+           <Card className="bg-zinc-900/20 border-zinc-800 flex flex-col justify-center p-4 h-24">
+               <div className="text-xs font-bold uppercase text-muted-foreground mb-1">
+                   Remaining
+               </div>
+               <div className="text-3xl font-black text-zinc-400">
+                   {Math.max(0, TARGETS.calories - currentData.calories)}
+               </div>
+           </Card>
+           
+           {/* CURRENT WEIGHT */}
+           <Card className="bg-zinc-900/50 border-zinc-800 p-4 h-24 flex items-center justify-between relative overflow-hidden group">
+               <div>
+                   <div className="text-xs font-bold uppercase text-muted-foreground mb-1 flex items-center gap-1">
+                       <Scale className="w-3 h-3" /> Morning Weigh-in
                    </div>
-                   
-                   <div className="grid grid-cols-2 gap-3 w-full mt-8">
-                       <Button 
-                            variant="outline" 
-                            className="h-12 border-cyan-200 bg-cyan-50/50 hover:bg-cyan-100 dark:border-cyan-800/50 dark:bg-cyan-900/20 dark:hover:bg-cyan-800/50 text-cyan-700 dark:text-cyan-300 font-bold transition-all active:scale-95" 
-                            onClick={() => quickAddWater(250)}
-                       >
-                           + 250ml
-                       </Button>
-                       <Button 
-                            variant="outline" 
-                            className="h-12 border-cyan-200 bg-cyan-50/50 hover:bg-cyan-100 dark:border-cyan-800/50 dark:bg-cyan-900/20 dark:hover:bg-cyan-800/50 text-cyan-700 dark:text-cyan-300 font-bold transition-all active:scale-95" 
-                            onClick={() => quickAddWater(500)}
-                       >
-                           + 500ml
-                       </Button>
-                   </div>
-                   <Button 
-                        variant="ghost" 
-                        className="w-full mt-2 text-cyan-600 dark:text-cyan-400 font-bold hover:bg-cyan-50 dark:hover:bg-cyan-900/20"
-                        onClick={() => setActiveDialog('water')}
-                   >
-                        <Plus className="w-4 h-4 mr-2" /> Custom Amount
-                   </Button>
-               </CardContent>
-
-                {/* Enhanced Water Visuals */}
-               <div className="absolute inset-0 pointer-events-none z-0">
-                    <div 
-                      className="absolute bottom-0 left-0 w-full bg-cyan-500/10 dark:bg-cyan-500/20 transition-all duration-1000 ease-in-out border-t border-cyan-500/20"
-                      style={{ height: `${Math.min(100, (currentData.water / TARGETS.water) * 100)}%` }}
+                   <Input 
+                      className="h-8 text-2xl font-black bg-transparent border-none p-0 focus-visible:ring-0 w-24 text-white placeholder:text-zinc-700" 
+                      placeholder="0.0"
+                      defaultValue={currentData.weight || ''}
+                      onBlur={(e) => {
+                           const val = parseFloat(e.target.value);
+                           if (!isNaN(val) && val !== currentData.weight) {
+                               updateMetric(dateKey, { weight: val });
+                               toast.success('Weight updated');
+                           }
+                      }}
                    />
-                   {/* Bubbles could go here if we had framer-motion easily accessible but CSS represents fluid well enough */}
                </div>
-          </Card>
+           </Card>
       </div>
 
-      {/* MACROS BREAKDOWN */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="border-0 bg-zinc-50 dark:bg-zinc-900/50 shadow-sm relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-4 opacity-5">
-                   <Beef className="w-24 h-24" />
-               </div>
-              <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-black uppercase tracking-wider text-red-500 flex items-center justify-between">
-                      <span className="flex items-center gap-2">Protein</span>
-                      <span className="text-xs bg-red-500/10 px-2 py-0.5 rounded-full">{Math.round((currentData.protein / TARGETS.protein) * 100)}%</span>
-                  </CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <div className="flex items-end gap-2 mb-2">
-                      <div className="text-4xl font-black tabular-nums">{currentData.protein}</div>
-                      <div className="text-sm font-bold text-muted-foreground mb-1.5">/ {TARGETS.protein}g</div>
-                  </div>
-                  <Progress value={(currentData.protein / TARGETS.protein) * 100} className="h-1.5 bg-zinc-200 dark:bg-zinc-800" indicatorClassName="bg-red-500"/>
-              </CardContent>
-          </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* LEFT: MAIN STATS (4 cols) */}
+          <div className="lg:col-span-4 space-y-6">
+               <Card className="border-orange-500/10 bg-gradient-to-b from-orange-500/5 to-transparent relative overflow-hidden">
+                   <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-orange-500 to-yellow-500 opacity-50" />
+                   <CardHeader>
+                       <CardTitle className="text-2xl font-black uppercase text-orange-600 dark:text-orange-400 flex items-center gap-2">
+                           <Flame className="w-6 h-6 fill-orange-500" /> Intake
+                       </CardTitle>
+                   </CardHeader>
+                   <CardContent className="space-y-6">
+                        <div className="text-center">
+                            <div className="text-7xl font-black tabular-nums tracking-tighter text-white drop-shadow-lg">{currentData.calories}</div>
+                            <div className="text-xs font-bold text-zinc-500 uppercase tracking-[0.2em] mt-2">Kcal Consumed</div>
+                        </div>
+                        <Progress value={getPercent(currentData.calories, TARGETS.calories)} className="h-2 bg-zinc-900" indicatorClassName="bg-gradient-to-r from-orange-500 to-yellow-500"/>
+                        
+                        <div className="grid grid-cols-3 gap-2">
+                            <div className="p-3 bg-zinc-900/50 rounded-xl border border-zinc-800/50 text-center">
+                                <div className="text-red-500 font-black text-xl">{currentData.protein}g</div>
+                                <div className="text-[9px] uppercase font-bold text-zinc-600">Protein</div>
+                            </div>
+                            <div className="p-3 bg-zinc-900/50 rounded-xl border border-zinc-800/50 text-center">
+                                <div className="text-blue-500 font-black text-xl">{currentData.carbs}g</div>
+                                <div className="text-[9px] uppercase font-bold text-zinc-600">Carbs</div>
+                            </div>
+                            <div className="p-3 bg-zinc-900/50 rounded-xl border border-zinc-800/50 text-center">
+                                <div className="text-yellow-500 font-black text-xl">{currentData.fats}g</div>
+                                <div className="text-[9px] uppercase font-bold text-zinc-600">Fats</div>
+                            </div>
+                        </div>
+                   </CardContent>
+               </Card>
 
-          <Card className="border-0 bg-zinc-50 dark:bg-zinc-900/50 shadow-sm relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-4 opacity-5">
-                   <Wheat className="w-24 h-24" />
-               </div>
-              <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-black uppercase tracking-wider text-blue-500 flex items-center justify-between">
-                      <span className="flex items-center gap-2">Carbs</span>
-                      <span className="text-xs bg-blue-500/10 px-2 py-0.5 rounded-full">{Math.round((currentData.carbs / TARGETS.carbs) * 100)}%</span>
-                  </CardTitle>
-              </CardHeader>
-              <CardContent>
-                  <div className="flex items-end gap-2 mb-2">
-                       <div className="text-4xl font-black tabular-nums">{currentData.carbs}</div>
-                       <div className="text-sm font-bold text-muted-foreground mb-1.5">/ {TARGETS.carbs}g</div>
-                  </div>
-                  <Progress value={(currentData.carbs / TARGETS.carbs) * 100} className="h-1.5 bg-zinc-200 dark:bg-zinc-800" indicatorClassName="bg-blue-500"/>
-              </CardContent>
-          </Card>
-
-          <Card className="border-0 bg-zinc-50 dark:bg-zinc-900/50 shadow-sm relative overflow-hidden">
-               <div className="absolute top-0 right-0 p-4 opacity-5">
-                   <Cookie className="w-24 h-24" />
-               </div>
-              <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-black uppercase tracking-wider text-yellow-500 flex items-center justify-between">
-                      <span className="flex items-center gap-2">Fats</span>
-                      <span className="text-xs bg-yellow-500/10 px-2 py-0.5 rounded-full">{Math.round((currentData.fats / TARGETS.fats) * 100)}%</span>
-                  </CardTitle>
-              </CardHeader>
-              <CardContent>
-                   <div className="flex items-end gap-2 mb-2">
-                       <div className="text-4xl font-black tabular-nums">{currentData.fats}</div>
-                       <div className="text-sm font-bold text-muted-foreground mb-1.5">/ {TARGETS.fats}g</div>
+               <Card className="border-cyan-500/20 bg-cyan-900/5 relative overflow-hidden">
+                   <CardHeader className="relative z-10 flex flex-row items-center justify-between pb-2">
+                       <CardTitle className="flex items-center gap-2 text-cyan-500"><Droplets className="w-5 h-5 fill-cyan-500" /> Hydration</CardTitle>
+                       <Button variant="ghost" size="sm" onClick={() => setActiveDialog('water')}><Plus className="w-4 h-4 text-cyan-500" /></Button>
+                   </CardHeader>
+                   <CardContent className="relative z-10 space-y-4">
+                       <div className="text-4xl font-black text-cyan-100 tabular-nums">{(currentData.water / 1000).toFixed(1)}L <span className="text-lg text-cyan-500/50">/ {(TARGETS.water / 1000).toFixed(1)}L</span></div>
+                       <div className="flex gap-2">
+                           <Button size="sm" variant="outline" className="flex-1 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20" onClick={() => quickAddWater(250)}>+250ml</Button>
+                           <Button size="sm" variant="outline" className="flex-1 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20" onClick={() => quickAddWater(500)}>+500ml</Button>
+                       </div>
+                   </CardContent>
+                   <div className="absolute inset-0 z-0 bg-cyan-500/5 pointer-events-none">
+                       <div className="absolute bottom-0 left-0 w-full bg-cyan-500/10 transition-all duration-1000 border-t border-cyan-500/20" style={{ height: `${Math.min(100, (currentData.water / TARGETS.water) * 100)}%` }} />
                    </div>
-                  <Progress value={(currentData.fats / TARGETS.fats) * 100} className="h-1.5 bg-zinc-200 dark:bg-zinc-800" indicatorClassName="bg-yellow-500"/>
-              </CardContent>
-          </Card>
+               </Card>
+          </div>
+
+          {/* RIGHT: TIMELINE (8 cols) */}
+          <div className="lg:col-span-8 space-y-8">
+              {MEAL_SECTIONS.map((section) => {
+                  const meals = (currentData.meals as any)?.[section.id] || [];
+                  const sectionCals = meals.reduce((acc: number, m: any) => acc + m.calories, 0);
+
+                  return (
+                      <div key={section.id} className="relative">
+                          {/* Timeline Line */}
+                          <div className="absolute left-6 top-8 bottom-0 w-0.5 bg-zinc-900 -z-10" />
+                          
+                          <div className="flex items-start gap-4">
+                              <div className={cn("p-3 rounded-2xl shrink-0 z-10 shadow-xl", section.color.replace('text', 'bg').replace('400', '500/10').replace('500', '500/10'), "border border-zinc-800 bg-zinc-950")}>
+                                  <section.icon className={cn("w-6 h-6", section.color)} />
+                              </div>
+                              <div className="flex-1 space-y-4 pt-1">
+                                  <div className="flex items-center justify-between">
+                                      <div>
+                                          <h3 className="text-xl font-bold">{section.label}</h3>
+                                          <div className="text-xs font-mono font-bold uppercase text-zinc-500">
+                                              {sectionCals} kcal total
+                                          </div>
+                                      </div>
+                                      <div className="flex gap-1">
+                                           {meals.length === 0 && (
+                                              <Button size="sm" variant="ghost" className="text-zinc-500 hover:text-white" onClick={() => copyYesterday(section.id)}>
+                                                  <Copy className="w-3 h-3 mr-2" /> Copy Yesterday
+                                              </Button>
+                                           )}
+                                           <Button size="sm" variant="outline" className="border-zinc-800 bg-zinc-900 hover:bg-zinc-800" onClick={() => setActiveDialog(section.id)}>
+                                               <Plus className="w-4 h-4 mr-2" /> Add Item
+                                           </Button>
+                                      </div>
+                                  </div>
+
+                                  {meals.length > 0 ? (
+                                      <div className="grid grid-cols-1 gap-3">
+                                          {meals.map((meal: Meal) => (
+                                              <div key={meal.id} className="flex items-center justify-between p-4 rounded-xl bg-zinc-900/40 border border-zinc-800/50 group hover:border-zinc-700 hover:bg-zinc-900 transition-all">
+                                                  <div>
+                                                      <div className="font-bold text-zinc-200 text-lg">{meal.name}</div>
+                                                      <div className="text-xs text-zinc-500 font-mono font-bold uppercase tracking-wide mt-1">
+                                                          {meal.calories} kcal • <span className="text-red-400">P{meal.macros?.protein}</span> <span className="text-blue-400">C{meal.macros?.carbs}</span> <span className="text-yellow-400">F{meal.macros?.fats}</span>
+                                                      </div>
+                                                  </div>
+                                                  <Button 
+                                                    size="icon" variant="ghost" className="opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-500 transition-all hover:bg-red-500/10"
+                                                    onClick={() => deleteMeal(section.id, meal.id)}
+                                                  >
+                                                      <Trash2 className="w-4 h-4" />
+                                                  </Button>
+                                              </div>
+                                          ))}
+                                      </div>
+                                  ) : (
+                                      <div className="h-24 border-2 border-dashed border-zinc-900 rounded-xl flex items-center justify-center text-zinc-700 font-bold text-sm uppercase tracking-widest">
+                                          Nothing Logged
+                                      </div>
+                                  )}
+                              </div>
+                          </div>
+                      </div>
+                  )
+              })}
+          </div>
+
       </div>
-
-       {/* WEIGHT ENTRY */}
-       <Card className="border-zinc-200 dark:border-zinc-800 overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50">
-              <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center'>
-                      <RotateCcw className='w-5 h-5 opacity-50'/>
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg font-bold">Daily Check-in</CardTitle>
-                    <CardDescription>Log your morning weight</CardDescription>
-                  </div>
-              </div>
-              <div className="flex items-center gap-2">
-                  <Input 
-                     type="number" 
-                     className="w-28 text-right font-black text-xl border-zinc-200 dark:border-zinc-800" 
-                     placeholder="0.0"
-                     defaultValue={currentData.weight || ''}
-                     onBlur={(e) => {
-                         const val = parseFloat(e.target.value);
-                         if (!isNaN(val) && val !== currentData.weight) {
-                             updateMetric(dateKey, { weight: val });
-                             toast.success('Weight updated');
-                         }
-                     }}
-                  />
-                  <span className="text-sm font-bold text-muted-foreground">lbs</span>
-              </div>
-          </CardHeader>
-      </Card>
-
     </div>
   );
 }
