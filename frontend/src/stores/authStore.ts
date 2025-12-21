@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import api from '@/lib/axios';
 
 interface User {
   _id: string;
@@ -29,6 +30,7 @@ interface AuthState {
   isHydrated: boolean;
   login: (user: User, token: string) => void;
   updateUser: (updates: Partial<User>) => void;
+  updateProfile: (data: Partial<User>) => Promise<void>;
   logout: () => void;
   setHydrated: () => void;
 }
@@ -44,6 +46,16 @@ export const useAuthStore = create<AuthState>()(
       updateUser: (updates) => set((state) => ({
         user: state.user ? { ...state.user, ...updates } : null
       })),
+      updateProfile: async (data) => {
+          try {
+              const response = await api.put('/auth/profile', data);
+              // The backend returns the full updated user object + token
+              set({ user: response.data });
+          } catch (error) {
+              console.error('Failed to update profile', error);
+              throw error;
+          }
+      },
       logout: () => {
         localStorage.removeItem('auth-storage');
         set({ user: null, token: null, isAuthenticated: false });

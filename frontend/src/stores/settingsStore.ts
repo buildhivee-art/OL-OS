@@ -5,14 +5,26 @@ export type Currency = 'USD' | 'INR' | 'EUR' | 'GBP' | 'JPY';
 
 interface SettingsState {
   currency: Currency;
+  notifications: boolean;
+  sound: boolean;
+  weekStart: 'sunday' | 'monday';
   setCurrency: (currency: Currency) => void;
+  setWeekStart: (start: 'sunday' | 'monday') => void;
+  toggleNotifications: () => void;
+  toggleSound: () => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       currency: 'USD',
+      notifications: true,
+      sound: true,
+      weekStart: 'sunday',
       setCurrency: (currency) => set({ currency }),
+      setWeekStart: (weekStart) => set({ weekStart }),
+      toggleNotifications: () => set((state) => ({ notifications: !state.notifications })),
+      toggleSound: () => set((state) => ({ sound: !state.sound })),
     }),
     {
       name: 'settings-storage',

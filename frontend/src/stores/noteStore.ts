@@ -1,8 +1,6 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import api from '@/lib/axios';
 import { useAuthStore } from './authStore';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 export interface Note {
   _id: string;
@@ -33,9 +31,7 @@ export const useNoteStore = create<NoteState>((set) => ({
   fetchNotes: async () => {
     set({ isLoading: true, error: null });
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.get(`${API_URL}/notes`, config);
+      const response = await api.get('/notes');
       set({ notes: response.data, isLoading: false });
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       set({ error: error.message, isLoading: false });
@@ -44,9 +40,7 @@ export const useNoteStore = create<NoteState>((set) => ({
 
   createNote: async (noteData: Partial<Note>) => {
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.post(`${API_URL}/notes`, noteData, config);
+      const response = await api.post('/notes', noteData);
       set(state => ({ notes: [response.data, ...state.notes] }));
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
        console.error(error);
@@ -55,9 +49,7 @@ export const useNoteStore = create<NoteState>((set) => ({
 
   updateNote: async (id: string, noteData: Partial<Note>) => {
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.put(`${API_URL}/notes/${id}`, noteData, config);
+      const response = await api.put(`/notes/${id}`, noteData);
       set(state => ({ 
         notes: state.notes.map(n => n._id === id ? response.data : n) 
       }));
@@ -68,9 +60,7 @@ export const useNoteStore = create<NoteState>((set) => ({
 
   deleteNote: async (id: string) => {
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.delete(`${API_URL}/notes/${id}`, config);
+      await api.delete(`/notes/${id}`);
       set(state => ({ 
         notes: state.notes.filter(n => n._id !== id) 
       }));

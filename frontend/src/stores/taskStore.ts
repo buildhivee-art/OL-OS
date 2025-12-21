@@ -1,8 +1,6 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import api from '@/lib/axios';
 import { useAuthStore } from './authStore';
-
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/tasks`;
 
 export interface Task {
   _id: string;
@@ -74,13 +72,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   fetchTasks: async () => {
     set({ isLoading: true, error: null });
     try {
-      const token = useAuthStore.getState().token;
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-      const response = await axios.get(API_URL, config);
+      const response = await api.get('/tasks');
       set({ tasks: response.data, isLoading: false });
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       set({ 
@@ -93,14 +85,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   createTask: async (taskData) => {
     set({ isLoading: true, error: null });
     try {
-      const token = useAuthStore.getState().token;
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
-      const response = await axios.post(API_URL, taskData, config);
+      const response = await api.post('/tasks', taskData);
       
       set(state => ({ 
         tasks: [...state.tasks, response.data],
@@ -118,14 +103,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   updateTask: async (id, taskData) => {
     set({ isLoading: true, error: null });
     try {
-      const token = useAuthStore.getState().token;
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
-      const response = await axios.put(`${API_URL}/${id}`, taskData, config);
+      const response = await api.put(`/tasks/${id}`, taskData);
       
       set(state => ({ 
         tasks: state.tasks.map(t => t._id === id ? response.data : t),
@@ -143,14 +121,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   deleteTask: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      const token = useAuthStore.getState().token;
-      const config = {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
-      await axios.delete(`${API_URL}/${id}`, config);
+      await api.delete(`/tasks/${id}`);
       
       set(state => ({ 
         tasks: state.tasks.filter(t => t._id !== id),
@@ -166,12 +137,8 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   },
 
   fetchLogs: async (startDate, endDate) => {
-    // Don't set global loading true as this might be background or part of main load
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      
-      const response = await axios.get(`${API_URL}/logs?startDate=${startDate}&endDate=${endDate}`, config);
+      const response = await api.get(`/tasks/logs?startDate=${startDate}&endDate=${endDate}`);
       
       const logsMap: Record<string, boolean> = {};
       response.data.forEach((log: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -199,10 +166,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     set({ logs: newLogs });
 
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      
-      const response = await axios.post(`${API_URL}/logs`, { taskId, date }, config);
+      const response = await api.post('/tasks/logs', { taskId, date });
       
       // Update User XP/Level if returned
       if (response.data.xp !== undefined) {
@@ -221,16 +185,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
   fetchMetrics: async (startDate, endDate) => {
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      
-      // We need to define API_URL specifically for metrics or reuse base
-      // Assuming metrics route is at /api/v1/metrics
-      // To fix this cleanly, I should probably split the store or have a base API url const.
-      // I'll just hardcode the metrics endpoint relative to base for now.
-      const METRICS_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/metrics`;
-      
-      const response = await axios.get(`${METRICS_URL}?startDate=${startDate}&endDate=${endDate}`, config);
+      const response = await api.get(`/metrics?startDate=${startDate}&endDate=${endDate}`);
       
       const metricsMap: Record<string, DailyMetricsData> = {};
       response.data.forEach((m: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -261,11 +216,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     set({ metrics: newMetrics });
 
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const METRICS_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/metrics`;
-      
-      await axios.post(METRICS_URL, { date, ...data }, config);
+      await api.post('/metrics', { date, ...data });
     } catch (error) {
       set({ metrics: currentMetrics });
       console.error('Failed to update metric', error);
@@ -274,11 +225,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
   seedMetrics: async () => {
       try {
-        const token = useAuthStore.getState().token;
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        const METRICS_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/metrics`;
-        await axios.post(`${METRICS_URL}/seed`, {}, config);
-        // Maybe refresh after seeding
+        await api.post('/metrics/seed', {});
       } catch (error) {
          console.error('Failed to seed', error); 
       }

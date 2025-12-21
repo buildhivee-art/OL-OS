@@ -1,8 +1,6 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import api from '@/lib/axios';
 import { useAuthStore } from './authStore';
-
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/content`;
 
 export interface ContentItem {
   _id?: string;
@@ -33,9 +31,7 @@ export const useContentStore = create<ContentStore>((set) => ({
   fetchContents: async () => {
     set({ isLoading: true });
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.get(API_URL, config);
+      const response = await api.get('/content');
       set({ contents: response.data, isLoading: false });
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Fetch contents error:', error);
@@ -45,9 +41,7 @@ export const useContentStore = create<ContentStore>((set) => ({
 
   createContent: async (data: Partial<ContentItem>) => {
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.post(API_URL, data, config);
+      const response = await api.post('/content', data);
       set((state) => ({ contents: [response.data, ...state.contents] }));
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Create content error:', error);
@@ -56,9 +50,7 @@ export const useContentStore = create<ContentStore>((set) => ({
 
   updateContent: async (id: string, data: Partial<ContentItem>) => {
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.put(`${API_URL}/${id}`, data, config);
+      const response = await api.put(`/content/${id}`, data);
       set((state) => ({
         contents: state.contents.map((c) => (c._id === id ? response.data : c)),
       }));
@@ -69,9 +61,7 @@ export const useContentStore = create<ContentStore>((set) => ({
 
   deleteContent: async (id: string) => {
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.delete(`${API_URL}/${id}`, config);
+      await api.delete(`/content/${id}`);
       set((state) => ({
         contents: state.contents.filter((c) => c._id !== id),
       }));

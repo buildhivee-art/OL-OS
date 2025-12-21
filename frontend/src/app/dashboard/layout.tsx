@@ -6,6 +6,7 @@ import { StatusHUD } from '@/components/StatusHUD';
 import { useEffect, useState } from 'react';
 import PageTransition from '@/components/PageTransition';
 import { cn } from '@/lib/utils';
+import { CommandMenu } from '@/components/CommandMenu';
 
 export default function DashboardLayout({
   children,
@@ -31,6 +32,7 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <CommandMenu />
       
       {/* Mobile Sidebar Overlay */}
       {isMobileOpen && (

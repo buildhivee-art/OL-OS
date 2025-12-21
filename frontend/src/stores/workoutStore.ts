@@ -1,8 +1,6 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import api from '@/lib/axios';
 import { useAuthStore } from './authStore';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
 
 export interface ExerciseSet {
   weight: number;
@@ -67,9 +65,7 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
   fetchWorkouts: async () => {
     set({ isLoading: true, error: null });
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.get(`${API_URL}/workouts`, config);
+      const response = await api.get('/workouts');
       set({ workouts: response.data, isLoading: false });
     } catch (error: any) {
       set({ 
@@ -82,9 +78,7 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
   createWorkout: async (workoutData: Partial<Workout>) => {
     set({ isLoading: true, error: null });
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      const response = await axios.post(`${API_URL}/workouts`, workoutData, config);
+      const response = await api.post('/workouts', workoutData);
       set(state => ({ 
         workouts: [response.data, ...state.workouts],
         isLoading: false 
@@ -101,9 +95,7 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
   updateWorkout: async (id: string, workoutData: Partial<Workout>) => {
     set({ isLoading: true, error: null });
     try {
-        const token = useAuthStore.getState().token;
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        const response = await axios.put(`${API_URL}/workouts/${id}`, workoutData, config);
+        const response = await api.put(`/workouts/${id}`, workoutData);
         set(state => ({ 
           workouts: state.workouts.map(w => w._id === id ? response.data : w),
           isLoading: false 
@@ -120,9 +112,7 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
   deleteWorkout: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const token = useAuthStore.getState().token;
-      const config = { headers: { Authorization: `Bearer ${token}` } };
-      await axios.delete(`${API_URL}/workouts/${id}`, config);
+      await api.delete(`/workouts/${id}`);
       set(state => ({ 
         workouts: state.workouts.filter(w => w._id !== id),
         isLoading: false 
@@ -138,9 +128,7 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
   fetchRoutines: async () => {
       set({ isLoading: true, error: null });
       try {
-        const token = useAuthStore.getState().token;
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        const response = await axios.get(`${API_URL}/routines`, config);
+        const response = await api.get('/routines');
         set({ routines: response.data, isLoading: false });
       } catch (error: any) {
         set({ 
@@ -153,9 +141,7 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
   createRoutine: async (routineData: Partial<Routine>) => {
       set({ isLoading: true, error: null });
       try {
-        const token = useAuthStore.getState().token;
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        const response = await axios.post(`${API_URL}/routines`, routineData, config);
+        const response = await api.post('/routines', routineData);
         set(state => ({ 
           routines: [...state.routines, response.data],
           isLoading: false 
@@ -172,9 +158,7 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
   updateRoutine: async (id: string, routineData: Partial<Routine>) => {
       set({ isLoading: true, error: null });
       try {
-        const token = useAuthStore.getState().token;
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        const response = await axios.put(`${API_URL}/routines/${id}`, routineData, config);
+        const response = await api.put(`/routines/${id}`, routineData);
         set(state => ({ 
           routines: state.routines.map(r => r._id === id ? response.data : r),
           isLoading: false 
@@ -191,9 +175,7 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
   deleteRoutine: async (id: string) => {
       set({ isLoading: true, error: null });
       try {
-        const token = useAuthStore.getState().token;
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        await axios.delete(`${API_URL}/routines/${id}`, config);
+        await api.delete(`/routines/${id}`);
         set(state => ({ 
           routines: state.routines.filter(r => r._id !== id),
           isLoading: false 
@@ -209,11 +191,9 @@ export const useWorkoutStore = create<WorkoutState>((set) => ({
   seedRoutines: async () => {
       set({ isLoading: true, error: null });
       try {
-        const token = useAuthStore.getState().token;
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        await axios.post(`${API_URL}/routines/seed`, {}, config);
+        await api.post('/routines/seed', {});
         // Refresh routines
-        const response = await axios.get(`${API_URL}/routines`, config);
+        const response = await api.get('/routines');
         set({ routines: response.data, isLoading: false });
       } catch (error: any) {
         set({ 

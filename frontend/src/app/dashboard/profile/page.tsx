@@ -56,7 +56,7 @@ const DUMMY_PROFILE = {
 };
 
 export default function ProfilePage() {
-  const { user, updateUser } = useAuthStore();
+  const { user, updateProfile } = useAuthStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
@@ -102,13 +102,19 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
       setLoading(true);
-      // Simulate API call since we are using dummy data mostly
-      setTimeout(() => {
-        updateUser(formData); // Update local store
+      try {
+        // Filter out non-updatable fields if necessary, or rely on backend to ignore them.
+        // Backend controller explicitly picks bio, tagline, location, website, goals, skills, attributes.
+        // It's safe to pass formData.
+        await updateProfile(formData); 
         toast.success("Identity updated successfully");
         setIsEditOpen(false);
+      } catch (error) {
+        toast.error("Failed to update identity");
+        console.error(error);
+      } finally {
         setLoading(false);
-      }, 800);
+      }
   };
 
   // --- Components ---

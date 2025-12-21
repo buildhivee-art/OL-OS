@@ -1,8 +1,6 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import api from '@/lib/axios';
 import { useAuthStore } from './authStore';
-
-const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/finance`;
 
 export interface Transaction {
   _id: string;
@@ -87,9 +85,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   fetchTransactions: async () => {
     set({ isLoading: true, error: null });
     try {
-        const token = useAuthStore.getState().token;
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        const response = await axios.get(API_URL, config);
+        const response = await api.get('/finance');
         set({ transactions: response.data, isLoading: false });
     } catch (error: any) {
         set({ isLoading: false, error: error.message });
@@ -98,9 +94,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   fetchDebts: async () => {
       try {
-          const token = useAuthStore.getState().token;
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          const response = await axios.get(`${API_URL}/debts`, config);
+          const response = await api.get('/finance/debts');
           set({ debts: response.data });
       } catch (error: any) {
           console.error('Failed to fetch debts', error);
@@ -109,9 +103,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   fetchGoals: async () => {
       try {
-          const token = useAuthStore.getState().token;
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          const response = await axios.get(`${API_URL}/goals`, config);
+          const response = await api.get('/finance/goals');
           set({ goals: response.data });
       } catch (error: any) {
           console.error('Failed to fetch goals', error);
@@ -120,9 +112,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   fetchBudgets: async () => {
       try {
-          const token = useAuthStore.getState().token;
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          const response = await axios.get(`${API_URL}/budgets`, config);
+          const response = await api.get('/finance/budgets');
           set({ budgets: response.data });
       } catch (error: any) {
           console.error('Failed to fetch budgets', error);
@@ -131,9 +121,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   fetchSummary: async () => {
     try {
-        const token = useAuthStore.getState().token;
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        const response = await axios.get(`${API_URL}/summary`, config);
+        const response = await api.get('/finance/summary');
         set({ summary: response.data });
     } catch (error: any) {
         console.error('Failed to fetch summary', error);
@@ -143,9 +131,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   addTransaction: async (data: Partial<Transaction>) => {
     set({ isLoading: true });
     try {
-        const token = useAuthStore.getState().token;
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        const response = await axios.post(API_URL, data, config);
+        const response = await api.post('/finance', data);
         
         set(state => ({
             transactions: [response.data, ...state.transactions],
@@ -160,9 +146,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   addDebt: async (data: Partial<Debt>) => {
       set({ isLoading: true });
       try {
-          const token = useAuthStore.getState().token;
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          const response = await axios.post(`${API_URL}/debts`, data, config);
+          const response = await api.post('/finance/debts', data);
           
           set(state => ({
               debts: [response.data, ...state.debts],
@@ -176,9 +160,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   addGoal: async (data: Partial<Goal>) => {
       set({ isLoading: true });
       try {
-          const token = useAuthStore.getState().token;
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          const response = await axios.post(`${API_URL}/goals`, data, config);
+          const response = await api.post('/finance/goals', data);
           
           set(state => ({
               goals: [...state.goals, response.data],
@@ -192,9 +174,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   addBudget: async (data: Partial<Budget>) => {
       set({ isLoading: true });
       try {
-          const token = useAuthStore.getState().token;
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          const response = await axios.post(`${API_URL}/budgets`, data, config);
+          const response = await api.post('/finance/budgets', data);
           
           set(state => ({
               budgets: [...state.budgets, response.data],
@@ -207,9 +187,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   updateGoal: async (id, data) => {
       try {
-          const token = useAuthStore.getState().token;
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          const response = await axios.put(`${API_URL}/goals/${id}`, data, config);
+          const response = await api.put(`/finance/goals/${id}`, data);
           
           set(state => ({
               goals: state.goals.map(g => g._id === id ? response.data : g)
@@ -221,9 +199,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   toggleDebt: async (id: string) => {
       try {
-          const token = useAuthStore.getState().token;
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          const response = await axios.put(`${API_URL}/debts/${id}`, {}, config);
+          const response = await api.put(`/finance/debts/${id}`, {});
           
           set(state => ({
               debts: state.debts.map(d => d._id === id ? response.data : d)
@@ -235,9 +211,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   deleteTransaction: async (id: string) => {
     try {
-        const token = useAuthStore.getState().token;
-        const config = { headers: { Authorization: `Bearer ${token}` } };
-        await axios.delete(`${API_URL}/${id}`, config);
+        await api.delete(`/finance/${id}`);
         
         set(state => ({
             transactions: state.transactions.filter(t => t._id !== id)
@@ -250,9 +224,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   deleteDebt: async (id: string) => {
       try {
-          const token = useAuthStore.getState().token;
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          await axios.delete(`${API_URL}/debts/${id}`, config);
+          await api.delete(`/finance/debts/${id}`);
           
           set(state => ({
               debts: state.debts.filter(d => d._id !== id)
@@ -264,9 +236,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   deleteGoal: async (id: string) => {
       try {
-          const token = useAuthStore.getState().token;
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          await axios.delete(`${API_URL}/goals/${id}`, config);
+          await api.delete(`/finance/goals/${id}`);
           
           set(state => ({
               goals: state.goals.filter(g => g._id !== id)
@@ -278,9 +248,7 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
 
   deleteBudget: async (id: string) => {
       try {
-          const token = useAuthStore.getState().token;
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          await axios.delete(`${API_URL}/budgets/${id}`, config);
+          await api.delete(`/finance/budgets/${id}`);
           
           set(state => ({
               budgets: state.budgets.filter(b => b._id !== id)
