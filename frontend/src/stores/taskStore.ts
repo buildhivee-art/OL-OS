@@ -57,6 +57,7 @@ export interface Meal {
     calories: number;
     macros: { protein: number; carbs: number; fats: number };
     micros?: Micros; 
+    timestamp?: string;
 }
 
 export interface BodyMetrics {
@@ -79,12 +80,7 @@ export interface DailyMetricsData {
   macros?: { protein: number; carbs: number; fats: number };
   micros?: Micros;
   body?: BodyMetrics;
-  meals?: {
-      breakfast: Meal[];
-      lunch: Meal[];
-      dinner: Meal[];
-      snacks: Meal[];
-  };
+  foodLog?: Meal[];
   supplements?: { id: string; name: string; taken: boolean }[];
 }
 
@@ -252,7 +248,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
               macros: m.macros,
               micros: m.micros,
               body: m.body,
-              meals: m.meals,
+              foodLog: m.foodLog,
               supplements: m.supplements
           };
       });

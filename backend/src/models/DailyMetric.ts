@@ -51,36 +51,13 @@ const dailyMetricSchema = new mongoose.Schema({
       potassium: { type: Number, default: 0 }, // mg
       vitaminC: { type: Number, default: 0 }, // mg
   },
-  meals: {
-      breakfast: [{ 
-          id: String, 
-          name: String, 
-          calories: Number, 
-          macros: { protein: Number, carbs: Number, fats: Number },
-          micros: { magnesium: Number, calcium: Number, vitaminD: Number }
-      }],
-      lunch: [{ 
-          id: String, 
-          name: String, 
-          calories: Number, 
-          macros: { protein: Number, carbs: Number, fats: Number },
-          micros: { magnesium: Number, calcium: Number, vitaminD: Number } 
-      }],
-      dinner: [{ 
-          id: String, 
-          name: String, 
-          calories: Number, 
-          macros: { protein: Number, carbs: Number, fats: Number },
-          micros: { magnesium: Number, calcium: Number, vitaminD: Number } 
-      }],
-      snacks: [{ 
-          id: String, 
-          name: String, 
-          calories: Number, 
-          macros: { protein: Number, carbs: Number, fats: Number },
-          micros: { magnesium: Number, calcium: Number, vitaminD: Number } 
-      }]
-  },
+  foodLog: [{
+      id: String,
+      name: String,
+      calories: Number,
+      macros: { protein: Number, carbs: Number, fats: Number },
+      timestamp: { type: Date, default: Date.now }
+  }],
   supplements: [{
       id: String,
       name: String,

@@ -42,6 +42,8 @@ app.use('/api/v1/workouts', workoutRoutes_1.default);
 app.use('/api/v1/notes', noteRoutes_1.default);
 app.use('/api/v1/roadmap', roadmapRoutes_1.default);
 app.use('/api/v1/routines', routineRoutes_1.default);
+const foodRoutes_1 = __importDefault(require("./routes/foodRoutes"));
+app.use('/api/v1/foods', foodRoutes_1.default);
 app.get('/', (req, res) => {
     res.send('Life Tracking System API is running');
 });

@@ -18,30 +18,25 @@ const initScheduledJobs = () => {
         const admins = await User_1.default.find({ role: 'admin' });
         for (const admin of admins) {
             const tasks = await Task_1.default.find({ user: admin._id, active: true });
-            if (tasks.length > 0 && admin.email) {
+            // Always send providing there is a user to send to, even if no tasks (template handles empty case gracefully)
+            if (admin.email) {
                 const html = (0, emailService_1.generateDailyBrief)(tasks);
                 await (0, emailService_1.sendEmail)(admin.email, `MORNING BRIEF :: ${new Date().toLocaleDateString()}`, html);
             }
         }
     });
-    // 2. DAILY END: 9:00 PM - Evening Check-in
+    // 2. DAILY END: 9:00 PM - Evening Check-in (Fitness, Habit, Nutrition)
     node_cron_1.default.schedule('0 21 * * *', async () => {
         console.log('Running Evening Check-in Job...');
         const admins = await User_1.default.find({ role: 'admin' });
         for (const admin of admins) {
             if (admin.email) {
-                // Potential future expansion: Summary of what was done today
-                await (0, emailService_1.sendEmail)(admin.email, `EVENING CHECK :: ${new Date().toLocaleDateString()}`, `<div style="font-family: monospace; background: #000; color: #0f0; padding: 20px;">
-                        <h1>// EVENING PROTOCOL //</h1>
-                        <p>End of day check-in.</p>
-                        <p>Please log all remaining tasks and update your status.</p>
-                        <hr style="border-color: #0f0"/>
-                        <small>OL-OS Command</small>
-                    </div>`);
+                const html = (0, emailService_1.generateDailyCheckIn)();
+                await (0, emailService_1.sendEmail)(admin.email, `EVENING CHECK :: ${new Date().toLocaleDateString()}`, html);
             }
         }
     });
-    // 3. WEEKLY REVIEW: Sunday 9:00 AM - Verification & Updates
+    // 3. WEEKLY REVIEW: Sunday 9:00 AM - Verification & Updates (Finance, Status)
     node_cron_1.default.schedule('0 9 * * 0', async () => {
         console.log('Running Weekly Review Job...');
         const admins = await User_1.default.find({ role: 'admin' });
@@ -56,6 +51,17 @@ const initScheduledJobs = () => {
             if (admin.email) {
                 const html = (0, emailService_1.generateWeeklyReport)(stats);
                 await (0, emailService_1.sendEmail)(admin.email, `WEEKLY UPDATE :: ${new Date().toLocaleDateString()}`, html);
+            }
+        }
+    });
+    // 4. MONTHLY BACKUP: 1st of Month 4:00 AM
+    node_cron_1.default.schedule('0 4 1 * *', async () => {
+        console.log('Running Monthly Backup Job...');
+        const admins = await User_1.default.find({ role: 'admin' });
+        for (const admin of admins) {
+            if (admin.email) {
+                const html = (0, emailService_1.generateMonthlyBackupReport)();
+                await (0, emailService_1.sendEmail)(admin.email, `SYSTEM BACKUP :: ${new Date().toLocaleDateString()}`, html);
             }
         }
     });

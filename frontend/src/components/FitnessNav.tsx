@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Dumbbell, Activity, PieChart, Utensils, Scale } from 'lucide-react';
+import { Dumbbell, Activity, PieChart, Utensils, Scale, ShoppingBasket } from 'lucide-react';
 
 export function FitnessNav() {
   const pathname = usePathname();
@@ -57,6 +57,18 @@ export function FitnessNav() {
       >
         <Utensils className="h-4 w-4" />
         Nutrition
+      </Link>
+      <Link
+        href="/dashboard/fitness/pantry"
+        className={cn(
+          "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+          pathname === '/dashboard/fitness/pantry'
+            ? "border-primary text-primary"
+            : "border-transparent text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <ShoppingBasket className="h-4 w-4" />
+        Pantry
       </Link>
       <Link
         href="/dashboard/fitness/measurements"
