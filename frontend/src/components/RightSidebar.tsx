@@ -189,27 +189,63 @@ export function RightSidebar({
 
           <div className="h-[1px] bg-zinc-200 dark:bg-zinc-800" />
             
-          {/* NUTRITION WIDGET */}
+
+          {/* NUTRITION WIDGET - ADVANCED */}
           <div className="space-y-3">
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
                    <Utensils className="w-3 h-3" />
-                   <span>Fuel Levels</span>
+                   <span>Bio-Fuel Status</span>
               </div>
-              <div className="p-4 bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800 space-y-3">
-                   <div className="flex justify-between items-end">
-                        <div>
-                            <div className="text-2xl font-black">{calories}</div>
-                            <div className="text-[10px] text-muted-foreground uppercase font-bold">kcal consumed</div>
+              <div className="p-5 bg-zinc-900 rounded-xl border border-zinc-800 relative overflow-hidden">
+                   {/* Background Glow */}
+                   <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+                   <div className="space-y-4 relative z-10">
+                        {/* Main Calories */}
+                        <div className="flex justify-between items-end">
+                             <div>
+                                 <div className="flex items-baseline gap-1">
+                                    <span className="text-3xl font-black text-white tracking-tight tabular-nums">{calories}</span>
+                                    <span className="text-xs font-bold text-zinc-500 uppercase">kcal</span>
+                                 </div>
+                                 <div className="text-[10px] text-orange-400 font-bold uppercase tracking-wider mt-1">
+                                     {Math.round((calories / targetCalories) * 100)}% of Daily Load
+                                 </div>
+                             </div>
+                             <div className="h-10 w-10 rounded-full border-4 border-zinc-800 border-t-orange-500 flex items-center justify-center bg-zinc-900/50 shadow-inner">
+                                 <Zap className="w-4 h-4 text-orange-500 fill-orange-500" />
+                             </div>
                         </div>
-                        <div className="text-right">
-                            <div className="text-sm font-bold text-muted-foreground">/ {targetCalories}</div>
+
+                        {/* Progress Bar with Zones */}
+                        <div className="relative h-2 bg-zinc-800 rounded-full overflow-hidden">
+                            <div 
+                                className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-600 via-orange-500 to-yellow-400 transition-all duration-1000 ease-out" 
+                                style={{ width: `${Math.min(100, (calories / targetCalories) * 100)}%` }}
+                            />
+                            {/* Marker Lines */}
+                            <div className="absolute top-0 left-[33%] h-full w-[1px] bg-black/20" />
+                            <div className="absolute top-0 left-[66%] h-full w-[1px] bg-black/20" />
                         </div>
-                   </div>
-                   <Progress value={Math.min(100, (calories / targetCalories) * 100)} className="h-2" />
-                   <div className="flex justify-between text-xs pt-1">
-                       <span className="text-muted-foreground">{protein}g Protein</span>
-                       <span className="text-muted-foreground">{todaysMetrics.macros?.carbs || 0}g Carbs</span>
-                       <span className="text-muted-foreground">{todaysMetrics.macros?.fats || 0}g Fat</span>
+
+                        {/* Macro Grid */}
+                        <div className="grid grid-cols-3 gap-2 pt-1">
+                            <div className="bg-zinc-950 p-2 rounded-lg border border-zinc-800 text-center relative overflow-hidden group">
+                                <div className="absolute bottom-0 left-0 w-full bg-red-500/10 h-[40%] transition-all group-hover:h-full group-hover:bg-red-500/20" />
+                                <div className="text-lg font-black text-red-400 relative z-10">{protein}g</div>
+                                <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider relative z-10">Protein</div>
+                            </div>
+                            <div className="bg-zinc-950 p-2 rounded-lg border border-zinc-800 text-center relative overflow-hidden group">
+                                <div className="absolute bottom-0 left-0 w-full bg-blue-500/10 h-[60%] transition-all group-hover:h-full group-hover:bg-blue-500/20" />
+                                <div className="text-lg font-black text-blue-400 relative z-10">{todaysMetrics.macros?.carbs || 0}g</div>
+                                <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider relative z-10">Carbs</div>
+                            </div>
+                            <div className="bg-zinc-950 p-2 rounded-lg border border-zinc-800 text-center relative overflow-hidden group">
+                                <div className="absolute bottom-0 left-0 w-full bg-yellow-500/10 h-[30%] transition-all group-hover:h-full group-hover:bg-yellow-500/20" />
+                                <div className="text-lg font-black text-yellow-400 relative z-10">{todaysMetrics.macros?.fats || 0}g</div>
+                                <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider relative z-10">Fats</div>
+                            </div>
+                        </div>
                    </div>
               </div>
           </div>

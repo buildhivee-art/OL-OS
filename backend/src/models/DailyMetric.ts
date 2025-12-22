@@ -41,7 +41,51 @@ const dailyMetricSchema = new mongoose.Schema({
       forearms: { type: Number, default: 0 },
       thighs: { type: Number, default: 0 },
       calves: { type: Number, default: 0 },
-  }
+  },
+  micros: {
+      magnesium: { type: Number, default: 0 }, // mg
+      calcium: { type: Number, default: 0 }, // mg
+      vitaminD: { type: Number, default: 0 }, // IU
+      zinc: { type: Number, default: 0 }, // mg
+      iron: { type: Number, default: 0 }, // mg
+      potassium: { type: Number, default: 0 }, // mg
+      vitaminC: { type: Number, default: 0 }, // mg
+  },
+  meals: {
+      breakfast: [{ 
+          id: String, 
+          name: String, 
+          calories: Number, 
+          macros: { protein: Number, carbs: Number, fats: Number },
+          micros: { magnesium: Number, calcium: Number, vitaminD: Number }
+      }],
+      lunch: [{ 
+          id: String, 
+          name: String, 
+          calories: Number, 
+          macros: { protein: Number, carbs: Number, fats: Number },
+          micros: { magnesium: Number, calcium: Number, vitaminD: Number } 
+      }],
+      dinner: [{ 
+          id: String, 
+          name: String, 
+          calories: Number, 
+          macros: { protein: Number, carbs: Number, fats: Number },
+          micros: { magnesium: Number, calcium: Number, vitaminD: Number } 
+      }],
+      snacks: [{ 
+          id: String, 
+          name: String, 
+          calories: Number, 
+          macros: { protein: Number, carbs: Number, fats: Number },
+          micros: { magnesium: Number, calcium: Number, vitaminD: Number } 
+      }]
+  },
+  supplements: [{
+      id: String,
+      name: String,
+      taken: { type: Boolean, default: false }
+  }]
 }, {
   timestamps: true
 });

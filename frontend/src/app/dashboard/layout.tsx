@@ -23,7 +23,7 @@ export default function DashboardLayout({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   
   // Right Sidebar State
-  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
   const [rightSidebarWidth, setRightSidebarWidth] = useState(300);
 
   useEffect(() => {

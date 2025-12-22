@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import api from '@/lib/axios';
 import { useAuthStore } from './authStore';
+import { startOfWeek, endOfWeek, eachDayOfInterval, format } from 'date-fns';
+
+export interface Link {
+  _id: string;
+  source: string;
+  target: string;
+  type: 'relates_to' | 'blocks' | 'subtask_of';
+}
 
 export interface Task {
   _id: string;
@@ -11,6 +19,8 @@ export interface Task {
   startDate: string;
   endDate?: string;
   active: boolean;
+  status?: 'todo' | 'in-progress' | 'completed';
+  links?: Link[];
 }
 
 export interface TaskLog {
@@ -20,25 +30,33 @@ export interface TaskLog {
   completed: boolean;
 }
 
-interface TaskState {
-  tasks: Task[];
-  logs: Record<string, boolean>; // Key: "taskId-date", Value: true (completed)
-  isLoading: boolean;
-  error: string | null;
-  
-  fetchTasks: () => Promise<void>;
-  createTask: (taskData: Omit<Task, '_id'>) => Promise<void>;
-  updateTask: (id: string, taskData: Partial<Task>) => Promise<void>;
-  deleteTask: (id: string) => Promise<void>;
-  
-  fetchLogs: (startDate: string, endDate: string) => Promise<void>;
-  toggleLog: (taskId: string, date: string) => Promise<void>;
-  
-  // Metrics
-  metrics: Record<string, DailyMetricsData>; // Key: date "YYYY-MM-DD"
-  fetchMetrics: (startDate: string, endDate: string) => Promise<void>;
-  updateMetric: (date: string, data: Partial<DailyMetricsData>) => Promise<void>;
-  seedMetrics: () => Promise<void>;
+export interface Micros {
+    magnesium: number;
+    calcium: number;
+    vitaminD: number;
+    zinc: number;
+    iron: number;
+    potassium: number;
+    vitaminC: number;
+}
+
+export interface Food {
+    _id: string;
+    name: string;
+    calories: number;
+    servingSize: { amount: number; unit: string };
+    macros: { protein: number; carbs: number; fats: number };
+    micros?: Micros;
+    category?: string;
+    tags?: string[];
+}
+
+export interface Meal {
+    id: string;
+    name: string; // food name or meal name
+    calories: number;
+    macros: { protein: number; carbs: number; fats: number };
+    micros?: Micros; 
 }
 
 export interface BodyMetrics {
@@ -53,33 +71,56 @@ export interface BodyMetrics {
   calves?: number;
 }
 
-export interface Meal {
-    id: string;
-    name: string;
-    calories: number;
-    macros: { protein: number; carbs: number; fats: number };
-}
-
 export interface DailyMetricsData {
   weight: number;
   hp: number;
   calories?: number;
   water?: number;
   macros?: { protein: number; carbs: number; fats: number };
+  micros?: Micros;
   body?: BodyMetrics;
-  // Meal Segmentation
   meals?: {
       breakfast: Meal[];
       lunch: Meal[];
       dinner: Meal[];
       snacks: Meal[];
   };
+  supplements?: { id: string; name: string; taken: boolean }[];
+}
+
+interface TaskState {
+  tasks: Task[];
+  logs: Record<string, boolean>; // Key: "taskId-date", Value: true (completed)
+  isLoading: boolean;
+  error: string | null;
+  
+  // Tasks
+  fetchTasks: () => Promise<void>;
+  createTask: (taskData: Omit<Task, '_id'>) => Promise<void>;
+  updateTask: (id: string, taskData: Partial<Task>) => Promise<void>;
+  deleteTask: (id: string) => Promise<void>;
+  
+  fetchLogs: (startDate: string, endDate: string) => Promise<void>;
+  toggleLog: (taskId: string, date: string) => Promise<void>;
+  
+  // Metrics & Nutrition
+  metrics: Record<string, DailyMetricsData>; // Key: date "YYYY-MM-DD"
+  foods: Food[];
+  fetchMetrics: (startDate: string, endDate: string) => Promise<void>;
+  updateMetric: (date: string, data: Partial<DailyMetricsData>) => Promise<void>;
+  seedMetrics: () => Promise<void>;
+
+  // Inventory
+  fetchFoods: () => Promise<void>;
+  createFood: (food: Partial<Food>) => Promise<void>;
+  deleteFood: (id: string) => Promise<void>;
 }
 
 export const useTaskStore = create<TaskState>((set, get) => ({
   tasks: [],
   logs: {},
   metrics: {},
+  foods: [],
   isLoading: false,
   error: null,
 
@@ -209,8 +250,10 @@ export const useTaskStore = create<TaskState>((set, get) => ({
               calories: m.calories,
               water: m.water,
               macros: m.macros,
+              micros: m.micros,
               body: m.body,
-              meals: m.meals
+              meals: m.meals,
+              supplements: m.supplements
           };
       });
 
@@ -244,5 +287,36 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       } catch (error) {
          console.error('Failed to seed', error); 
       }
+  },
+
+  // Inventory Management
+  fetchFoods: async () => {
+      try {
+          const response = await api.get('/foods');
+          set({ foods: response.data });
+      } catch (error) {
+          console.error("Failed to fetch foods", error);
+      }
+  },
+
+  createFood: async (food) => {
+      try {
+          const response = await api.post('/foods', food);
+          set(state => ({ foods: [...state.foods, response.data] }));
+      } catch (error) {
+          console.error("Failed to create food", error);
+          throw error;
+      }
+  },
+
+  deleteFood: async (id) => {
+      try {
+          await api.delete(`/foods/${id}`);
+          set(state => ({ foods: state.foods.filter(f => f._id !== id) }));
+      } catch (error) {
+          console.error("Failed to delete food", error);
+          throw error;
+      }
   }
+
 }));

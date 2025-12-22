@@ -38,7 +38,7 @@ const QUOTES = [
 
 export default function DashboardPage() {
   const { user, isAuthenticated } = useAuthStore();
-  const { tasks, logs, fetchTasks, fetchLogs, toggleLog } = useTaskStore();
+  const { tasks, logs, fetchTasks, fetchLogs, toggleLog, metrics } = useTaskStore();
   const { summary, fetchSummary } = useFinanceStore();
   const { workouts, fetchWorkouts } = useWorkoutStore();
   const { contents, fetchContents } = useContentStore();
@@ -66,6 +66,10 @@ export default function DashboardPage() {
     const end = new Date();
     const start = subDays(end, 90);
     fetchLogs(format(start, 'yyyy-MM-dd'), format(end, 'yyyy-MM-dd'));
+
+    // Fetch daily metrics for nutrition widget
+    // Using taskStore's fetchMetrics
+    useTaskStore.getState().fetchMetrics(format(new Date(), 'yyyy-MM-dd'), format(new Date(), 'yyyy-MM-dd'));
 
     // Random Quote
     setQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
@@ -287,35 +291,104 @@ export default function DashboardPage() {
             </CardContent>
         </Card>
 
-        {/* FITNESS CARD */}
-        <Card className="md:col-span-2 border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 cursor-pointer hover:border-blue-500/20 transition-colors group" onClick={() => router.push('/dashboard/fitness')}>
-             <CardHeader className="flex flex-row items-center justify-between pb-2">
+        {/* FITNESS & NUTRITION INTELLIGENCE */}
+        <Card className="md:col-span-2 border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 cursor-pointer hover:border-blue-500/20 transition-colors group relative overflow-hidden" onClick={() => router.push('/dashboard/fitness')}>
+             <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                 <Dumbbell className="w-32 h-32 text-blue-500" />
+             </div>
+             
+             <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                    <Dumbbell className="w-5 h-5 text-blue-500" /> Fitness Intelligence
+                    <Dumbbell className="w-5 h-5 text-blue-500" /> Bio-Metrics & Fuel
                 </CardTitle>
                 <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
              </CardHeader>
-             <CardContent>
+             <CardContent className="relative z-10">
                  <div className="grid grid-cols-2 gap-4">
-                     <div className="p-3 bg-white dark:bg-zinc-950 rounded-lg border border-zinc-100 dark:border-zinc-800">
-                         <div className="text-xs text-muted-foreground uppercase font-bold mb-1">Last Session</div>
-                         {workouts.length > 0 ? (
-                             <>
-                                <div className="font-bold truncate">{workouts[0].name}</div>
-                                <div className="text-xs text-muted-foreground">{format(parseISO(workouts[0].date), 'MMM dd')} • {workouts[0].duration} min</div>
-                             </>
-                         ) : (
-                             <div className="text-sm text-muted-foreground italic">No data</div>
-                         )}
+                     {/* Workout Side */}
+                     <div className="space-y-3">
+                         <div className="p-3 bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                             <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1 flex items-center gap-1">
+                                <Activity className="w-3 h-3 text-emerald-500"/> Last Session
+                             </div>
+                             {workouts.length > 0 ? (
+                                 <div>
+                                     <div className="font-bold truncate text-sm">{workouts[0].name}</div>
+                                     <div className="text-[10px] text-muted-foreground font-mono mt-1">{format(parseISO(workouts[0].date), 'MMM dd')} • {workouts[0].duration} min</div>
+                                 </div>
+                             ) : (
+                                 <div className="text-sm text-muted-foreground italic">No recent activity</div>
+                             )}
+                         </div>
+
+                         <div className="p-3 bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+                              <div>
+                                  <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Morning Weight</div>
+                                  <div className="flex items-end gap-1">
+                                      <span className="text-xl font-black tabular-nums">178.4</span>
+                                      <span className="text-[10px] text-muted-foreground mb-1 font-bold">lbs</span>
+                                  </div>
+                              </div>
+                              <div className="h-8 w-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
+                                  <TrendingUp className="w-4 h-4" />
+                              </div>
+                         </div>
                      </div>
-                     <div className="p-3 bg-white dark:bg-zinc-950 rounded-lg border border-zinc-100 dark:border-zinc-800">
-                          <div className="text-xs text-muted-foreground uppercase font-bold mb-1">Body Metrics</div>
-                          <div className="flex items-end gap-2">
-                              <span className="text-xl font-black">57</span>
-                              <span className="text-xs text-muted-foreground mb-1">kg</span>
-                          </div>
-                          <div className="text-xs text-green-500 font-bold">Optimal Range</div>
+
+     {/* Nutrition Side (Vibrant) */}
+     {(() => {
+         const todayMetric = metrics[todayStr] || {};
+         const cal = todayMetric.calories || 0;
+         const calTarget = 2700; // Hardcoded fallback or use store setting if available
+         const p = todayMetric.macros?.protein || 0;
+         const c = todayMetric.macros?.carbs || 0;
+         const f = todayMetric.macros?.fats || 0;
+         const pTarget = 140; const cTarget = 350; const fTarget = 75;
+
+         return (
+             <div className="p-4 bg-zinc-900 rounded-xl border border-zinc-800 relative overflow-hidden flex flex-col justify-between">
+                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-transparent pointer-events-none" />
+                 
+                 <div className="flex justify-between items-start relative z-10">
+                     <div className="text-[10px] uppercase font-bold text-orange-400 flex items-center gap-1">
+                         <Flame className="w-3 h-3" /> Calories
                      </div>
+                     <div className="text-[10px] font-bold text-zinc-500">
+                         {cal.toLocaleString()} / {calTarget.toLocaleString()}
+                     </div>
+                 </div>
+
+                 <div className="relative z-10 my-2">
+                     <div className="flex items-baseline gap-1">
+                         <span className="text-3xl font-black text-white tracking-tighter">{cal.toLocaleString()}</span>
+                         <span className="text-[10px] text-zinc-500 font-bold uppercase">kcal</span>
+                     </div>
+                     <Progress value={Math.min(100, (cal/calTarget)*100)} className="h-1.5 bg-zinc-800 mt-2" indicatorClassName="bg-gradient-to-r from-orange-600 to-yellow-500" />
+                 </div>
+
+                 <div className="flex justify-between gap-1 relative z-10">
+                     <div className="flex flex-col items-center flex-1">
+                         <div className="h-1 w-full bg-red-500/20 rounded-full overflow-hidden">
+                             <div className="h-full bg-red-500" style={{ width: `${Math.min(100, (p/pTarget)*100)}%` }} />
+                         </div>
+                         <span className="text-[9px] font-bold text-zinc-400 mt-1">{p}g P</span>
+                     </div>
+                     <div className="flex flex-col items-center flex-1 mx-2">
+                         <div className="h-1 w-full bg-blue-500/20 rounded-full overflow-hidden">
+                             <div className="h-full bg-blue-500" style={{ width: `${Math.min(100, (c/cTarget)*100)}%` }} />
+                         </div>
+                         <span className="text-[9px] font-bold text-zinc-400 mt-1">{c}g C</span>
+                     </div>
+                     <div className="flex flex-col items-center flex-1">
+                         <div className="h-1 w-full bg-yellow-500/20 rounded-full overflow-hidden">
+                             <div className="h-full bg-yellow-500" style={{ width: `${Math.min(100, (f/fTarget)*100)}%` }} />
+                         </div>
+                         <span className="text-[9px] font-bold text-zinc-400 mt-1">{f}g F</span>
+                     </div>
+                 </div>
+             </div>
+         );
+     })()}
                  </div>
              </CardContent>
         </Card>
