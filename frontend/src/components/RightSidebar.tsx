@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useAtmosphereStore } from "@/stores/atmosphereStore";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ContentActiveWidget } from "@/components/ContentActiveWidget";
@@ -51,11 +52,10 @@ export function RightSidebar({
   const { tasks, logs, toggleLog, metrics, fetchMetrics } = useTaskStore();
   const { routines, fetchRoutines } = useWorkoutStore();
   const { contents, fetchContents } = useContentStore();
+  const { mode: atmosphere, setMode: setAtmosphere } = useAtmosphereStore();
 
   // Local State
-  const [atmosphere, setAtmosphere] = useState<"focus" | "energy" | "zen">(
-    "focus"
-  );
+  // removed local atmosphere
   const [directive, setDirective] = useState<{
     text: string;
     icon: string;

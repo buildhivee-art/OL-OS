@@ -148,3 +148,65 @@
   scrollbar-width: thin;
   scrollbar-color: #27272a transparent;
 }
+
+/* Custom Biosphere Animations */
+@keyframes float-1 {
+  0% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) translateX(20px);
+    opacity: 0;
+  }
+}
+@keyframes float-2 {
+  0% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-150px) translateX(-20px);
+    opacity: 0;
+  }
+}
+@keyframes float-3 {
+  0% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-80px) translateX(10px);
+    opacity: 0;
+  }
+}
+
+.animate-float-1 {
+  animation: float-1 10s infinite ease-in-out;
+}
+.animate-float-2 {
+  animation: float-2 15s infinite ease-in-out;
+  animation-delay: 2s;
+}
+.animate-float-3 {
+  animation: float-3 8s infinite ease-in-out;
+  animation-delay: 5s;
+}
+.animate-pulse-slow {
+  animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.animate-pulse-slower {
+  animation: pulse 12s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.animate-ping-slow {
+  animation: ping 5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
